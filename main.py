@@ -2,9 +2,7 @@ import pygame
 import sys
 from map_data import MAP, BLOCK_MAP, BLOCK_OFFSET_X
 
-# =====================
 # 基本設定
-# =====================
 width, height = 1200, 720
 floor_y = 600
 size = 24
@@ -19,9 +17,7 @@ screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("jump action game")
 clock = pygame.time.Clock()
 
-# =====================
 # 画像読み込み
-# =====================
 bg = pygame.image.load("image/bg.png").convert()
 block = pygame.image.load("image/block.png").convert_alpha()
 princess = pygame.image.load("image/princess.png").convert_alpha()
@@ -35,27 +31,21 @@ player_imgs = [
 font_large = pygame.font.Font(None, 60)
 font_medium = pygame.font.Font(None, 40)
 
-# =====================
 # マップ初期化
-# =====================
 floor = [int(c) for line in MAP.split() for c in line]
 goal_map_x = len(floor) - 3
 
 BLOCK_H = len(BLOCK_MAP)
 BLOCK_W = len(BLOCK_MAP[0])
 
-# =====================
 # プレイヤー状態
-# =====================
 camera_x = 0
 pl_x = width // 2
 pl_y = floor_y
 pl_yp = 0
 pl_jump = False
 
-# =====================
 # 攻撃関連
-# =====================
 attack = False
 attack_timer = 0
 ATTACK_TIME = 10
@@ -69,9 +59,7 @@ sword_color = "RED"   # "RED", "GREEN", "BLUE"
 scene = "タイトル"
 timer = 0
 
-# =====================
 # 関数
-# =====================
 def render_text(surface, x, y, txt, font, color):
     surf = font.render(txt, True, color)
     rect = surf.get_rect(center=(x, y))
@@ -98,10 +86,7 @@ def on_block_top(px, py, vy):
                     return block_y
     return None
 
-
-# =====================
 # メインループ
-# =====================
 def game_loop():
     global scene, pl_x, pl_y, pl_yp, pl_jump
     global camera_x, timer
@@ -200,9 +185,7 @@ def game_loop():
             if timer > 150:
                 scene = "タイトル"
 
-        # =====================
-        # 描画
-        # =====================
+    # 描画
         # 背景
         start_x = -(camera_x % bg.get_width())
         x = start_x
