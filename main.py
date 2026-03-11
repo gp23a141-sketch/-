@@ -1,8 +1,10 @@
 import pygame
 import sys
+import cv2
+import controller
 from map_data import MAP, BLOCK_MAP, BLOCK_OFFSET_X
 
-# 基本設定
+# ===== 基本設定 =====
 width, height = 1200, 720
 floor_y = 600
 size = 24
@@ -18,13 +20,17 @@ PLAYER_H = 48
 
 pygame.init()
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("jump action game")
+pygame.display.set_caption("Jump Action Game - Camera Sword")
 clock = pygame.time.Clock()
 
-# 画像読み込み
+# ===== ペンライトコントローラー初期化 =====
+pen_con = controller.PenlightController(camera_id=0)
+
+# ===== 画像読み込み =====
 bg = pygame.image.load("image/bg.png").convert()
 block = pygame.image.load("image/block.png").convert_alpha()
 princess = pygame.image.load("image/princess.png").convert_alpha()
+
 player_imgs = [
     pygame.image.load("image/player0.png").convert_alpha(),
     pygame.image.load("image/player1.png").convert_alpha(),
@@ -35,35 +41,35 @@ player_imgs = [
 font_large = pygame.font.Font(None, 60)
 font_medium = pygame.font.Font(None, 40)
 
-# マップ初期化
+# ===== マップ初期化 =====
 floor = [int(c) for line in MAP.split() for c in line]
 goal_map_x = len(floor) - 3
 
 BLOCK_H = len(BLOCK_MAP)
 BLOCK_W = len(BLOCK_MAP[0])
 
-# プレイヤー状態
+# ===== プレイヤー状態 =====
 camera_x = 0
 pl_x = width // 2
 pl_y = floor_y
 pl_yp = 0
 pl_jump = False
 
-# 攻撃関連
+# ===== 攻撃関連 =====
 attack = False
 attack_timer = 0
 ATTACK_TIME = 10
 
-attack_gauge = 0
-ATTACK_THRESHOLD = 120
-
-# 剣の色（将来：画像認識から上書き）
-sword_color = "RED"   # "RED", "GREEN", "BLUE"
+# 剣属性（カメラで変更）
+sword_color = "RED"
 
 scene = "タイトル"
 timer = 0
 
-# 関数
+prev_detected = False  # 立ち上がり検出用
+
+
+# ===== テキスト描画 =====
 def render_text(surface, x, y, txt, font, color):
     surf = font.render(txt, True, color)
     rect = surf.get_rect(center=(x, y))
@@ -124,17 +130,43 @@ def check_block_collision():
                     else:
                         camera_x += speed
 
-# メインループ
+
+# ===== メインループ =====
 def game_loop():
     global scene, pl_x, pl_y, pl_yp, pl_jump
     global camera_x, timer
-    global attack, attack_timer, attack_gauge
-    global sword_color
+    global attack, attack_timer
+    global sword_color, prev_detected
 
     bg_w = bg.get_width()
     running = True
 
     while running:
+        # ==========================
+        # カメラ認識
+        # ==========================
+        is_detected, pos, element, debug_frame = pen_con.update()
+
+        # カメラデバッグ画面表示
+        if debug_frame is not None:
+            cv2.imshow("Camera Debug", debug_frame)
+            cv2.waitKey(1)
+
+        # 属性変換
+        if element == "fire":
+            sword_color = "RED"
+        elif element == "water":
+            sword_color = "BLUE"
+        elif element == "grass":
+            sword_color = "GREEN"
+
+        # 立ち上がり検出で攻撃
+        if is_detected and not prev_detected and not attack:
+            attack = True
+            attack_timer = ATTACK_TIME
+
+        prev_detected = is_detected
+
         # -------- イベント --------
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -147,7 +179,6 @@ def game_loop():
                     pl_yp = 0
                     pl_jump = False
                     attack = False
-                    attack_gauge = 0
                     scene = "ゲーム"
                     timer = 0
 
@@ -155,9 +186,9 @@ def game_loop():
 
         # -------- ゲーム処理 --------
         if scene == "ゲーム":
+
             keys = pygame.key.get_pressed()
 
-            # 移動
             if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
                 camera_x += speed
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -165,18 +196,9 @@ def game_loop():
                 max_camera = goal_map_x * size - width // 2
                 camera_x = min(camera_x, max_camera)
 
-            # ジャンプ
             if keys[pygame.K_SPACE] and not pl_jump:
                 pl_jump = True
                 pl_yp = jump_power
-
-            # デバッグ用：剣の色切り替え
-            if keys[pygame.K_1]:
-                sword_color = "RED"
-            if keys[pygame.K_2]:
-                sword_color = "GREEN"
-            if keys[pygame.K_3]:
-                sword_color = "BLUE"
 
             pl_x = camera_x + width // 2
 
@@ -190,16 +212,6 @@ def game_loop():
                 pl_y = floor_y
                 pl_yp = 0
                 pl_jump = False
-
-            # 攻撃ゲージ増加
-            if not attack:
-                attack_gauge += 1
-
-            # 閾値で自動攻撃
-            if attack_gauge >= ATTACK_THRESHOLD and not attack:
-                attack = True
-                attack_timer = ATTACK_TIME
-                attack_gauge = 0
 
             # 攻撃中
             if attack:
@@ -221,13 +233,14 @@ def game_loop():
             if timer > 150:
                 scene = "タイトル"
 
-    # 描画
-        # 背景
-        start_x = -(camera_x % bg.get_width())
+        # ==========================
+        # 描画
+        # ==========================
+        start_x = -(camera_x % bg_w)
         x = start_x
         while x < width:
             screen.blit(bg, (x, 0))
-            x += bg.get_width()
+            x += bg_w
 
         # 地面
         first_map = int(camera_x // size)
@@ -258,27 +271,23 @@ def game_loop():
             player_imgs[ani].get_rect(center=(width // 2, pl_y))
         )
 
-        # 攻撃（剣の色反映）
+        # 攻撃エフェクト
         if attack:
             sword_rgb = get_sword_rgb(sword_color)
-            attack_rect = pygame.Rect(width // 2 + 20, pl_y - 20, 40, 40)
-            pygame.draw.rect(screen, sword_rgb, attack_rect, 3)
-
-        # 攻撃ゲージUI
-        pygame.draw.rect(screen, (255, 255, 255), (50, 50, 200, 20), 2)
-        gauge_w = int(200 * min(attack_gauge / ATTACK_THRESHOLD, 1))
-        pygame.draw.rect(screen, (255, 0, 0), (50, 50, gauge_w, 20))
+            attack_rect = pygame.Rect(width // 2 + 20, pl_y - 20, 60, 60)
+            pygame.draw.rect(screen, sword_rgb, attack_rect, 4)
 
         # タイトルUI
         if scene == "タイトル":
             render_text(screen, width // 2, height * 0.4,
-                        "jump action game", font_large, (255, 215, 0))
+                        "Jump Action Game", font_large, (255, 215, 0))
             render_text(screen, width // 2, height * 0.6,
-                        "click to start", font_medium, (200, 200, 255))
+                        "Click to Start", font_medium, (200, 200, 255))
 
         pygame.display.flip()
         clock.tick(fps)
 
+    pen_con.release()
     pygame.quit()
     sys.exit()
 
