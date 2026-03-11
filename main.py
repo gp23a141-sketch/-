@@ -7,10 +7,14 @@ width, height = 1200, 720
 floor_y = 600
 size = 24
 fps = 30
+PLAYER_W = 32
+PLAYER_H = 48
 
 speed = 12
-jump_power = -60
-gravity = 6
+jump_power = -35
+gravity = 4
+PLAYER_W = 32
+PLAYER_H = 48
 
 pygame.init()
 screen = pygame.display.set_mode((width, height))
@@ -76,15 +80,49 @@ def get_sword_rgb(color_name):
     return (255, 255, 255)
 
 
-def on_block_top(px, py, vy):
-    tx = int(px // size) - BLOCK_OFFSET_X
-    if 0 <= tx < BLOCK_W:
-        for by in range(BLOCK_H):
-            if BLOCK_MAP[by][tx] == "1":
-                block_y = floor_y - (BLOCK_H - by) * size
-                if py <= block_y and py >= block_y - abs(vy) - 2:
-                    return block_y
-    return None
+def check_block_collision():
+
+    global pl_y, pl_yp, pl_jump, camera_x
+
+    player_rect = pygame.Rect(
+        pl_x - PLAYER_W//2,
+        pl_y - PLAYER_H,
+        PLAYER_W,
+        PLAYER_H
+    )
+
+    for by in range(BLOCK_H):
+        for bx in range(BLOCK_W):
+
+            if BLOCK_MAP[by][bx] != "1":
+                continue
+
+            world_x = (bx + BLOCK_OFFSET_X) * size
+            world_y = floor_y - (BLOCK_H - by) * size
+
+            block_rect = pygame.Rect(world_x, world_y, size, size)
+
+            if player_rect.colliderect(block_rect):
+
+                # 上から着地
+                if pl_yp >= 0 and player_rect.bottom <= block_rect.top + 10:
+
+                    pl_y = block_rect.top
+                    pl_yp = 0
+                    pl_jump = False
+
+                # 下から頭ぶつけ
+                elif pl_yp < 0 and player_rect.top >= block_rect.bottom - 10:
+
+                    pl_yp = 0
+
+                # 横衝突
+                else:
+
+                    if player_rect.centerx < block_rect.centerx:
+                        camera_x -= speed
+                    else:
+                        camera_x += speed
 
 # メインループ
 def game_loop():
@@ -124,6 +162,8 @@ def game_loop():
                 camera_x += speed
             if keys[pygame.K_LEFT] or keys[pygame.K_a]:
                 camera_x = max(0, camera_x - speed)
+                max_camera = goal_map_x * size - width // 2
+                camera_x = min(camera_x, max_camera)
 
             # ジャンプ
             if keys[pygame.K_SPACE] and not pl_jump:
@@ -145,12 +185,8 @@ def game_loop():
             pl_yp += gravity
 
             # 足場判定
-            by = on_block_top(pl_x, pl_y, pl_yp)
-            if by is not None:
-                pl_y = by
-                pl_yp = 0
-                pl_jump = False
-            elif pl_y >= floor_y:
+            check_block_collision()
+            if pl_y >= floor_y:
                 pl_y = floor_y
                 pl_yp = 0
                 pl_jump = False
