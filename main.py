@@ -1,31 +1,28 @@
 import pygame
 import sys
-import cv2
 import controller
-from map_data import MAP, BLOCK_MAP, BLOCK_OFFSET_X
+from map_data import MAP
 
 # ===== 基本設定 =====
 width, height = 1200, 720
 floor_y = 600
 size = 24
-fps = 30
+fps = 60
 
-speed = 12
-jump_power = -60
-gravity = 6
+speed = 10
+jump_power = -30
+gravity = 3
 
 pygame.init()
 screen = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Jump Action Game - Camera Sword")
 clock = pygame.time.Clock()
 
-# ===== ペンライトコントローラー初期化 =====
+# ===== カメラ =====
 pen_con = controller.PenlightController(camera_id=0)
 
-# ===== 画像読み込み =====
+# ===== 画像 =====
 bg = pygame.image.load("image/bg.png").convert()
 block = pygame.image.load("image/block.png").convert_alpha()
-princess = pygame.image.load("image/princess.png").convert_alpha()
 
 player_imgs = [
     pygame.image.load("image/player0.png").convert_alpha(),
@@ -34,199 +31,209 @@ player_imgs = [
     pygame.image.load("image/player2.png").convert_alpha(),
 ]
 
-font_large = pygame.font.Font(None, 60)
-font_medium = pygame.font.Font(None, 40)
+enemy_base = pygame.image.load("image/devil.png").convert_alpha()
+enemy_base = pygame.transform.scale(enemy_base, (100, 100))
 
-# ===== マップ初期化 =====
+# ===== マップ =====
 floor = [int(c) for line in MAP.split() for c in line]
-goal_map_x = len(floor) - 3
 
-BLOCK_H = len(BLOCK_MAP)
-BLOCK_W = len(BLOCK_MAP[0])
-
-# ===== プレイヤー状態 =====
+# ===== プレイヤー =====
 camera_x = 0
-pl_x = width // 2
 pl_y = floor_y
 pl_yp = 0
 pl_jump = False
 
-# ===== 攻撃関連 =====
+PLAYER_MAX_HP = 5
+player_hp = PLAYER_MAX_HP
+
+invincible_timer = 0
+INVINCIBLE_TIME = 180
+
+player_attr = "fire"
+
+# ===== 敵 =====
+enemies = []
+
+def reset_enemies():
+    enemies.clear()
+    attrs = ["fire", "water", "grass"]
+    for i in range(6):
+        attr = attrs[i % 3]
+        enemies.append([800 + i * 400, 3, attr])
+
+reset_enemies()
+
+# ===== 攻撃 =====
 attack = False
 attack_timer = 0
-ATTACK_TIME = 10
+ATTACK_TIME = 12
+prev_detected = False
 
-# 剣属性（カメラで変更）
-sword_color = "RED"
+# ===== 演出 =====
+critical_timer = 0
+CRITICAL_TIME = 30
 
-scene = "タイトル"
-timer = 0
+hit_stop = 0
 
-prev_detected = False  # 立ち上がり検出用
+# フラッシュ
+flash_timer = 0
+flash_type = None  # "white" or "black"
+FLASH_TIME = 6
 
+# ===== 色 =====
+attr_colors = {
+    "fire": (255, 80, 80),
+    "water": (80, 120, 255),
+    "grass": (80, 255, 120)
+}
 
-# ===== テキスト描画 =====
-def render_text(surface, x, y, txt, font, color):
-    surf = font.render(txt, True, color)
-    rect = surf.get_rect(center=(x, y))
-    surface.blit(surf, rect.topleft)
+# ===== 属性相性 =====
+def get_damage(player_attr, enemy_attr):
+    if player_attr == "fire":
+        if enemy_attr == "grass":
+            return 3
+        elif enemy_attr == "water":
+            return 0
+    elif player_attr == "water":
+        if enemy_attr == "fire":
+            return 3
+        elif enemy_attr == "grass":
+            return 0
+    elif player_attr == "grass":
+        if enemy_attr == "water":
+            return 3
+        elif enemy_attr == "fire":
+            return 0
+    return 1
 
-
-def get_sword_rgb(color_name):
-    if color_name == "RED":
-        return (255, 0, 0)
-    elif color_name == "GREEN":
-        return (0, 255, 0)
-    elif color_name == "BLUE":
-        return (0, 0, 255)
-    return (255, 255, 255)
-
-
-def on_block_top(px, py, vy):
-    tx = int(px // size) - BLOCK_OFFSET_X
-    if 0 <= tx < BLOCK_W:
-        for by in range(BLOCK_H):
-            if BLOCK_MAP[by][tx] == "1":
-                block_y = floor_y - (BLOCK_H - by) * size
-                if py <= block_y and py >= block_y - abs(vy) - 2:
-                    return block_y
-    return None
-
-
-# ===== メインループ =====
+# ===== メイン =====
 def game_loop():
-    global scene, pl_x, pl_y, pl_yp, pl_jump
-    global camera_x, timer
-    global attack, attack_timer
-    global sword_color, prev_detected
+    global pl_y, pl_yp, pl_jump, camera_x
+    global attack, attack_timer, prev_detected
+    global player_hp, invincible_timer
+    global player_attr
+    global critical_timer, hit_stop
+    global flash_timer, flash_type
 
-    bg_w = bg.get_width()
     running = True
+    timer = 0
 
     while running:
-        # ==========================
-        # カメラ認識
-        # ==========================
-        is_detected, pos, element, debug_frame = pen_con.update()
+        timer += 1
 
-        # カメラデバッグ画面表示
-        if debug_frame is not None:
-            cv2.imshow("Camera Debug", debug_frame)
-            cv2.waitKey(1)
+        # ===== ヒットストップ =====
+        if hit_stop > 0:
+            hit_stop -= 1
+            pygame.display.flip()
+            clock.tick(fps)
+            continue
 
-        # 属性変換
-        if element == "fire":
-            sword_color = "RED"
-        elif element == "water":
-            sword_color = "BLUE"
-        elif element == "grass":
-            sword_color = "GREEN"
+        # ===== カメラ =====
+        if timer % 2 == 0:
+            is_detected, _, element, _ = pen_con.update()
+        else:
+            is_detected = False
+            element = "none"
 
-        # 立ち上がり検出で攻撃
-        if is_detected and not prev_detected and not attack:
+        if element in ["fire", "water", "grass"]:
+            player_attr = element
+
+        if is_detected and not prev_detected:
             attack = True
             attack_timer = ATTACK_TIME
 
         prev_detected = is_detected
 
-        # -------- イベント --------
+        # ===== イベント =====
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if scene == "タイトル":
-                    camera_x = 0
-                    pl_y = floor_y
-                    pl_yp = 0
-                    pl_jump = False
-                    attack = False
-                    scene = "ゲーム"
-                    timer = 0
+        # ===== 入力 =====
+        keys = pygame.key.get_pressed()
 
-        timer += 1
+        if keys[pygame.K_RIGHT]:
+            camera_x += speed
+        if keys[pygame.K_LEFT]:
+            camera_x = max(0, camera_x - speed)
 
-        # -------- ゲーム処理 --------
-        if scene == "ゲーム":
+        if keys[pygame.K_SPACE] and not pl_jump:
+            pl_jump = True
+            pl_yp = jump_power
 
-            keys = pygame.key.get_pressed()
+        # ===== 重力 =====
+        pl_y += pl_yp
+        pl_yp += gravity
 
-            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-                camera_x += speed
-            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-                camera_x = max(0, camera_x - speed)
+        if pl_y >= floor_y:
+            pl_y = floor_y
+            pl_yp = 0
+            pl_jump = False
 
-            if keys[pygame.K_SPACE] and not pl_jump:
-                pl_jump = True
-                pl_yp = jump_power
+        # ===== 無敵 =====
+        if invincible_timer > 0:
+            invincible_timer -= 1
 
-            pl_x = camera_x + width // 2
+        # ===== 判定 =====
+        atk_rect = pygame.Rect(width//2 + 40, pl_y - 40, 80, 80)
+        player_rect = pygame.Rect(width//2-16, pl_y-48, 32, 48)
 
-            # 重力
-            pl_y += pl_yp
-            pl_yp += gravity
+        new_enemies = []
 
-            # 足場判定
-            by = on_block_top(pl_x, pl_y, pl_yp)
-            if by is not None:
-                pl_y = by
-                pl_yp = 0
-                pl_jump = False
-            elif pl_y >= floor_y:
-                pl_y = floor_y
-                pl_yp = 0
-                pl_jump = False
+        for ex, hp, attr in enemies:
+            screen_x = ex - camera_x
+            enemy_rect = pygame.Rect(screen_x, floor_y-100, 100, 100)
 
-            # 攻撃中
-            if attack:
-                attack_timer -= 1
-                if attack_timer <= 0:
-                    attack = False
+            # 攻撃ヒット
+            if attack and attack_timer == ATTACK_TIME - 2:
+                if atk_rect.colliderect(enemy_rect):
+                    damage = get_damage(player_attr, attr)
+                    hp -= damage
 
-            # 落下
-            if pl_y > floor_y + 200:
-                scene = "ゲームオーバー"
-                timer = 0
+                    if damage == 3:
+                        critical_timer = CRITICAL_TIME
+                        hit_stop = 10
 
-            # ゴール
-            if abs(pl_x - goal_map_x * size) < size:
-                scene = "クリア"
-                timer = 0
+                        flash_timer = FLASH_TIME
+                        flash_type = "white"
+                    else:
+                        hit_stop = 5
 
-        elif scene in ["ゲームオーバー", "クリア"]:
-            if timer > 150:
-                scene = "タイトル"
+            # 被ダメ
+            if player_rect.colliderect(enemy_rect):
+                if invincible_timer == 0:
+                    player_hp -= 1
+                    invincible_timer = INVINCIBLE_TIME
+                    hit_stop = 8
 
-        # ==========================
-        # 描画
-        # ==========================
-        start_x = -(camera_x % bg_w)
-        x = start_x
-        while x < width:
-            screen.blit(bg, (x, 0))
-            x += bg_w
+                    flash_timer = FLASH_TIME
+                    flash_type = "black"
 
-        # 地面
-        first_map = int(camera_x // size)
-        for i in range(width // size + 2):
-            map_i = first_map + i
-            if map_i < len(floor) and floor[map_i] == 1:
-                screen.blit(block, (map_i * size - camera_x, floor_y + 40))
+            if hp > 0:
+                new_enemies.append([ex, hp, attr])
 
-        # 空中ブロック
-        for y in range(BLOCK_H):
-            for x in range(BLOCK_W):
-                if BLOCK_MAP[y][x] == "1":
-                    world_x = (x + BLOCK_OFFSET_X) * size
-                    world_y = floor_y - (BLOCK_H - y) * size
-                    screen.blit(block, (world_x - camera_x, world_y))
+        enemies[:] = new_enemies
 
-        # ゴール
-        princess_x = goal_map_x * size - camera_x
-        screen.blit(
-            princess,
-            princess.get_rect(center=(princess_x + size // 2, floor_y - 40))
-        )
+        # ===== 攻撃時間 =====
+        if attack:
+            attack_timer -= 1
+            if attack_timer <= 0:
+                attack = False
+
+        # ===== 描画 =====
+        screen.fill((0, 0, 0))
+        screen.blit(bg, (0, 0))
+
+        # 床
+        if enemies:
+            max_enemy_x = max(e[0] for e in enemies)
+        else:
+            max_enemy_x = camera_x + width
+
+        end_tile = int(max_enemy_x // size) + 20
+
+        for i in range(end_tile):
+            screen.blit(block, (i * size - camera_x, floor_y + 40))
 
         # プレイヤー
         ani = int(timer / 3) % 4
@@ -237,16 +244,54 @@ def game_loop():
 
         # 攻撃エフェクト
         if attack:
-            sword_rgb = get_sword_rgb(sword_color)
-            attack_rect = pygame.Rect(width // 2 + 20, pl_y - 20, 60, 60)
-            pygame.draw.rect(screen, sword_rgb, attack_rect, 4)
+            pygame.draw.rect(screen, attr_colors[player_attr], atk_rect, 3)
 
-        # タイトルUI
-        if scene == "タイトル":
-            render_text(screen, width // 2, height * 0.4,
-                        "Jump Action Game", font_large, (255, 215, 0))
-            render_text(screen, width // 2, height * 0.6,
-                        "Click to Start", font_medium, (200, 200, 255))
+        # 敵
+        for ex, hp, attr in enemies:
+            screen_x = ex - camera_x
+
+            if -120 < screen_x < width:
+                tinted = enemy_base.copy()
+                tinted.fill(attr_colors[attr], special_flags=pygame.BLEND_RGBA_MULT)
+
+                screen.blit(tinted, (screen_x, floor_y-100))
+
+                pygame.draw.rect(screen, (0,0,0),
+                    (screen_x, floor_y-115, 100, 10))
+                pygame.draw.rect(screen, attr_colors[attr],
+                    (screen_x, floor_y-115, 100*(hp/3), 10))
+
+        # プレイヤーHP
+        pygame.draw.rect(screen, (0,0,0), (50,50,200,20))
+        pygame.draw.rect(screen, (0,255,0),
+            (50,50,200*(player_hp/PLAYER_MAX_HP),20))
+
+        # CRITICAL表示
+        if critical_timer > 0:
+            font = pygame.font.Font(None, 80)
+            text = font.render("CRITICAL!", True, (255,255,0))
+            y_offset = -120 + (CRITICAL_TIME - critical_timer) * 2
+            screen.blit(text, (width//2 - 180, pl_y + y_offset))
+            critical_timer -= 1
+
+        # ===== フラッシュ演出 =====
+        if flash_timer > 0:
+            flash_timer -= 1
+            overlay = pygame.Surface((width, height))
+
+            if flash_type == "white":
+                overlay.fill((255, 255, 255))
+            elif flash_type == "black":
+                overlay.fill((0, 0, 0))
+
+            overlay.set_alpha(120)
+            screen.blit(overlay, (0, 0))
+
+        # GAME OVER
+        if player_hp <= 0:
+            font = pygame.font.Font(None, 100)
+            text = font.render("GAME OVER", True, (255,0,0))
+            screen.blit(text, (width//2 - 250, height//2 - 50))
 
         pygame.display.flip()
         clock.tick(fps)
@@ -254,7 +299,6 @@ def game_loop():
     pen_con.release()
     pygame.quit()
     sys.exit()
-
 
 if __name__ == "__main__":
     game_loop()
