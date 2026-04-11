@@ -2,28 +2,18 @@ import pygame
 import sys
 import controller
 from map_data import MAP
+from map_data import BLOCK_MAP
+from map_data import BLOCK_OFFSET_X
 
 # ===== 基本設定 =====
 width, height = 1200, 720
 floor_y = 600
 size = 24
-<<<<<<< HEAD
 fps = 60
 
 speed = 10
 jump_power = -30
 gravity = 3
-=======
-fps = 30
-PLAYER_W = 32
-PLAYER_H = 48
-
-speed = 12
-jump_power = -35
-gravity = 4
-PLAYER_W = 32
-PLAYER_H = 48
->>>>>>> aa5ad190c1e39bd5f533a38cfa1c91c6240ef58e
 
 pygame.init()
 screen = pygame.display.set_mode((width, height))
@@ -118,67 +108,7 @@ def get_damage(player_attr, enemy_attr):
             return 0
     return 1
 
-<<<<<<< HEAD
 # ===== メイン =====
-=======
-
-def get_sword_rgb(color_name):
-    if color_name == "RED":
-        return (255, 0, 0)
-    elif color_name == "GREEN":
-        return (0, 255, 0)
-    elif color_name == "BLUE":
-        return (0, 0, 255)
-    return (255, 255, 255)
-
-
-def check_block_collision():
-
-    global pl_y, pl_yp, pl_jump, camera_x
-
-    player_rect = pygame.Rect(
-        pl_x - PLAYER_W//2,
-        pl_y - PLAYER_H,
-        PLAYER_W,
-        PLAYER_H
-    )
-
-    for by in range(BLOCK_H):
-        for bx in range(BLOCK_W):
-
-            if BLOCK_MAP[by][bx] != "1":
-                continue
-
-            world_x = (bx + BLOCK_OFFSET_X) * size
-            world_y = floor_y - (BLOCK_H - by) * size
-
-            block_rect = pygame.Rect(world_x, world_y, size, size)
-
-            if player_rect.colliderect(block_rect):
-
-                # 上から着地
-                if pl_yp >= 0 and player_rect.bottom <= block_rect.top + 10:
-
-                    pl_y = block_rect.top
-                    pl_yp = 0
-                    pl_jump = False
-
-                # 下から頭ぶつけ
-                elif pl_yp < 0 and player_rect.top >= block_rect.bottom - 10:
-
-                    pl_yp = 0
-
-                # 横衝突
-                else:
-
-                    if player_rect.centerx < block_rect.centerx:
-                        camera_x -= speed
-                    else:
-                        camera_x += speed
-
-
-# ===== メインループ =====
->>>>>>> aa5ad190c1e39bd5f533a38cfa1c91c6240ef58e
 def game_loop():
     global pl_y, pl_yp, pl_jump, camera_x
     global attack, attack_timer, prev_detected
@@ -237,19 +167,10 @@ def game_loop():
         pl_y += pl_yp
         pl_yp += gravity
 
-<<<<<<< HEAD
         if pl_y >= floor_y:
             pl_y = floor_y
             pl_yp = 0
             pl_jump = False
-=======
-            if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
-                camera_x += speed
-            if keys[pygame.K_LEFT] or keys[pygame.K_a]:
-                camera_x = max(0, camera_x - speed)
-                max_camera = goal_map_x * size - width // 2
-                camera_x = min(camera_x, max_camera)
->>>>>>> aa5ad190c1e39bd5f533a38cfa1c91c6240ef58e
 
         # ===== 無敵 =====
         if invincible_timer > 0:
@@ -261,18 +182,9 @@ def game_loop():
 
         new_enemies = []
 
-<<<<<<< HEAD
         for ex, hp, attr in enemies:
             screen_x = ex - camera_x
             enemy_rect = pygame.Rect(screen_x, floor_y-100, 100, 100)
-=======
-            # 足場判定
-            check_block_collision()
-            if pl_y >= floor_y:
-                pl_y = floor_y
-                pl_yp = 0
-                pl_jump = False
->>>>>>> aa5ad190c1e39bd5f533a38cfa1c91c6240ef58e
 
             # 攻撃ヒット
             if attack and attack_timer == ATTACK_TIME - 2:
@@ -322,8 +234,16 @@ def game_loop():
 
         end_tile = int(max_enemy_x // size) + 20
 
-        for i in range(end_tile):
-            screen.blit(block, (i * size - camera_x, floor_y + 40))
+        for i, tile in enumerate(floor):
+            if tile == 1:
+                screen.blit(block, (i * size - camera_x, floor_y + 40))
+        for y, row in enumerate(BLOCK_MAP):
+            for x, tile in enumerate(row):
+                if tile == "1":
+                    world_x = (x + BLOCK_OFFSET_X) * size
+                    world_y = floor_y - (len(BLOCK_MAP) - y) * size
+
+                    screen.blit(block, (world_x - camera_x, world_y))
 
         # プレイヤー
         ani = int(timer / 3) % 4
