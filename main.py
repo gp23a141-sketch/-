@@ -2,8 +2,6 @@ import pygame
 import sys
 import controller
 from map_data import MAP
-from map_data import BLOCK_MAP
-from map_data import BLOCK_OFFSET_X
 
 # ===== 基本設定 =====
 width, height = 1200, 720
@@ -234,16 +232,8 @@ def game_loop():
 
         end_tile = int(max_enemy_x // size) + 20
 
-        for i, tile in enumerate(floor):
-            if tile == 1:
-                screen.blit(block, (i * size - camera_x, floor_y + 40))
-        for y, row in enumerate(BLOCK_MAP):
-            for x, tile in enumerate(row):
-                if tile == "1":
-                    world_x = (x + BLOCK_OFFSET_X) * size
-                    world_y = floor_y - (len(BLOCK_MAP) - y) * size
-
-                    screen.blit(block, (world_x - camera_x, world_y))
+        for i in range(end_tile):
+            screen.blit(block, (i * size - camera_x, floor_y + 40))
 
         # プレイヤー
         ani = int(timer / 3) % 4
