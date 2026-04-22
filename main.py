@@ -1,7 +1,7 @@
 import pygame
 import sys
 import controller
-from map_data import MAP
+from map_data import MAP,BLOCK_MAP,BLOCK_OFFSET_X
 
 # ===== 基本設定 =====
 width, height = 1200, 720
@@ -234,13 +234,38 @@ def game_loop():
 
         for i in range(end_tile):
             screen.blit(block, (i * size - camera_x, floor_y + 40))
+        player_rect = pygame.Rect(width//2-16, pl_y-24, 32, 48)
 
+        for y, row in enumerate(BLOCK_MAP):
+            for x, cell in enumerate(row):
+                if cell == "1":
+                    bx = (x + BLOCK_OFFSET_X) * size
+                    by = floor_y - (len(BLOCK_MAP) - y) * size
+
+                    screen_x = bx - camera_x
+                    block_rect = pygame.Rect(screen_x, by, size, size)
+
+                    # 当たり判定
+                    if player_rect.colliderect(block_rect):
+                        if pl_yp > 0 and player_rect.bottom <= block_rect.top + 40:
+                            pl_y = by
+                            pl_yp = 0
+                            pl_jump = False
+
+                    # 描画
+                    screen.blit(block, (screen_x, by))
+
+                    # ★可視化（デバッグ）
+                    pygame.draw.rect(screen, (255, 0, 0), block_rect, 2)
         # プレイヤー
         ani = int(timer / 3) % 4
         screen.blit(
             player_imgs[ani],
             player_imgs[ani].get_rect(center=(width // 2, pl_y))
         )
+        pygame.draw.rect(screen, (0, 0, 255), player_rect, 2)
+        foot_rect = pygame.Rect(player_rect.x, player_rect.bottom, player_rect.width, 2)
+        pygame.draw.rect(screen, (255, 255, 0), foot_rect, 2)
 
         # 攻撃エフェクト
         if attack:
