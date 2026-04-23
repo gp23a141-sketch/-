@@ -11,8 +11,10 @@ class PenlightController:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
-        # 露出設定（背景を暗くして光を際立たせる）
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, -6) # 露出設定（背景を暗くして光を際立たせる）
+        self.cap.set(cv2.CAP_PROP_SATURATION, 200) # 彩度の設定 値の範囲はカメラによる（0〜255など）
         
         self.proc_w = 320
         self.proc_h = 240
@@ -31,23 +33,24 @@ class PenlightController:
 
         self.masks_config = {
             "fire":  [
-                ([0, 100, 100], [10, 255, 255]), 
-                ([170, 100, 100], [180, 255, 255])
+                ([0, 160, 160], [10, 255, 255]), 
+                ([170, 160, 160], [180, 255, 255])
             ],
-            "yellow": [
-                ([20, 100, 100], [35, 255, 255])
+            "purple": [
+                # 紫に変更
+                ([140, 160, 160], [165, 255, 255])
             ],
             "grass": [
-                ([40, 100, 100], [80, 255, 255])
+                ([45, 160, 160], [75, 255, 255])
             ],
             "water": [
-                ([100, 100, 100], [140, 255, 255])
+                ([100, 160, 160], [130, 255, 255])
             ]
         }
-
+        
         self.draw_colors = {
             "fire": (0, 0, 255),
-            "yellow": (0, 255, 255),
+            "purple": (128, 0, 128),
             "grass": (0, 255, 0),
             "water": (255, 0, 0),
             "none": (200, 200, 200)
