@@ -1,7 +1,7 @@
 import pygame
 import sys
 import controller
-from map_data import MAP,BLOCK_MAP,BLOCK_OFFSET_X
+from map_data import MAP,BLOCK_MAP,BLOCK_OFFSET_X,MAP2,BLOCK_MAP2
 
 # ===== 基本設定 =====
 width, height = 1200, 720
@@ -35,7 +35,27 @@ enemy_base = pygame.image.load("image/devil.png").convert_alpha()
 enemy_base = pygame.transform.scale(enemy_base, (100, 100))
 
 # ===== マップ =====
-floor = [int(c) for line in MAP.split() for c in line]
+maps = [
+    {
+        "map": MAP,
+        "block": BLOCK_MAP,
+        "offset": BLOCK_OFFSET_X
+    },
+    {
+        "map": MAP2,
+        "block": BLOCK_MAP2,
+        "offset": BLOCK_OFFSET_X
+    }
+]
+map_number = 0
+def load_map(index):
+    global floor, BLOCK_MAP, BLOCK_OFFSET_X
+
+    data = maps[index]
+    floor = [int(c) for line in data["map"].split() for c in line]
+    BLOCK_MAP = data["block"]
+    BLOCK_OFFSET_X = data["offset"]
+load_map(map_number)
 
 # ===== プレイヤー =====
 camera_x = 0
@@ -114,6 +134,7 @@ def game_loop():
     global player_attr
     global critical_timer, hit_stop
     global flash_timer, flash_type
+    global map_number
 
     running = True
     timer = 0
@@ -236,6 +257,16 @@ def game_loop():
             screen.blit(block, (i * size - camera_x, floor_y + 40))
         player_rect = pygame.Rect(width//2-16, pl_y-24, 32, 48)
 
+        if camera_x > 2000:  # 適当な終点
+            map_number += 1
+
+            if map_number >= len(maps):
+                map_number = 0  # ループさせる場合
+
+            load_map(map_number)
+
+            camera_x = 0
+            reset_enemies()
         for y, row in enumerate(BLOCK_MAP):
             for x, cell in enumerate(row):
                 if cell == "1":
