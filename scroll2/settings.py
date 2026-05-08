@@ -1,0 +1,43 @@
+# settings.py
+
+import os
+
+# =========================================================
+# 設定
+# =========================================================
+
+USE_CAMERA = True
+DEBUG = True
+
+# =========================================================
+# パス
+# =========================================================
+
+BASE_DIR = os.path.dirname(__file__)
+
+SOUND_DIR = os.path.join(BASE_DIR, "sounds")
+IMAGE_DIR = os.path.join(BASE_DIR, "image")
+
+# =========================================================
+# 基本設定
+# =========================================================
+
+width, height = 1200, 720
+
+floor_y = 600
+size = 24
+fps = 60
+
+PLAYER_W = 32
+PLAYER_H = 48
+
+speed = 10
+jump_power = -28
+gravity = 2
+
+PLAYER_MAX_HP = 5
+ENEMY_MAX_HP = 3
+
+INVINCIBLE_TIME = 120
+ATTACK_TIME = 12
+FLASH_TIME = 6
