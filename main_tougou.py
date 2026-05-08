@@ -540,7 +540,7 @@ def game_loop():
 
             player_rect = pygame.Rect(
                 width // 2 - 16,
-                pl_y - 48,
+                pl_y - 32,
                 32,
                 48
             )
@@ -814,7 +814,7 @@ def game_loop():
             # Princess
             # =================================================
 
-            princess_x = goal_map_x * size - camera_x -1700
+            princess_x = goal_map_x * size - camera_x -400
             princess_y = floor_y - 40
 
             princess_rect = princess.get_rect(
