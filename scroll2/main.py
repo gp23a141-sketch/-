@@ -170,6 +170,9 @@ def init_game():
     global player_hp
     global player_attr
     global invincible_timer
+    global time_left
+
+    time_left = TIME_LIMIT
 
     camera_x = 0
 
@@ -224,6 +227,8 @@ def game_loop():
     global last_element
     global detected
     global map_number
+
+    global time_left
 
     running = True
     timer = 0
@@ -285,7 +290,7 @@ def game_loop():
 
                 screen.blit(
                     block,
-                    (i * size, floor_y + 40)
+                    (i * size, floor_y + 20)
                 )
 
             ani = (timer // 4) % 4
@@ -334,6 +339,11 @@ def game_loop():
         elif scene == "game":
 
             screen.blit(bg, (0, 0))
+
+            time_left -= 1
+
+            if time_left <= 0:
+                scene = "gameover"
 
             if USE_CAMERA and timer % 8 == 0:
 
@@ -385,6 +395,10 @@ def game_loop():
             pl_y += pl_yp
             pl_yp += gravity
 
+            # 穴落下判定
+            if pl_y > FALL_DEATH_Y:
+                scene = "gameover"
+
             if invincible_timer > 0:
                 invincible_timer -= 1
 
@@ -419,7 +433,7 @@ def game_loop():
 
                         by = floor_y - (
                             len(BLOCK_MAP) - y
-                        ) * size + 20
+                        ) * size + 22
 
                         screen_x = bx - camera_x
 
@@ -466,14 +480,6 @@ def game_loop():
             if not on_block and pl_y < floor_y:
 
                 pl_jump = True
-
-            # 地面
-            if pl_y >= floor_y:
-
-                pl_y = floor_y
-
-                pl_yp = 0
-                pl_jump = False
 
             # =================================================
             # DEBUG PLAYER
@@ -705,6 +711,14 @@ def game_loop():
                     20
                 )
             )
+
+            txt = font_mid.render(
+                f"TIME: {time_left // 60}",
+                True,
+                (255, 255, 255)
+            )
+
+            screen.blit(txt, (50, 80))
 
             # =================================================
             # フィードバック
