@@ -460,6 +460,7 @@ def game_loop():
                                 on_block = True
 
                                 player_rect.bottom = pl_y
+                        
 
                         # ブロック描画
                         screen.blit(
@@ -666,29 +667,31 @@ def game_loop():
             princess_x = goal_map_x * size - camera_x -400
             princess_y = floor_y - 40
 
-            princess_rect = princess.get_rect(
-                center=(princess_x + size // 2, princess_y)
-            )
-
-            screen.blit(
-                princess,
-                princess_rect
-            )
-
-            if player_rect.colliderect(princess_rect):
-
-                scene = "clear"
-
-            # DEBUG Princess
-            if DEBUG:
-
-                pygame.draw.rect(
-                    screen,
-                    (0, 255, 255),
-                    princess_rect,
-                    2
+            if map_number == 1:
+                princess_rect = princess.get_rect(
+                    center=(princess_x + size // 2, princess_y)
                 )
 
+            
+                screen.blit(
+                    princess,
+                    princess_rect
+                )
+
+                if player_rect.colliderect(princess_rect):
+
+                    scene = "clear"
+
+                # DEBUG Princess
+                if DEBUG:
+
+                    pygame.draw.rect(
+                        screen,
+                        (0, 255, 255),
+                        princess_rect,
+                        2
+                    )
+            
             # =================================================
             # HP
             # =================================================
@@ -845,6 +848,8 @@ def game_loop():
             if keys[pygame.K_r]:
 
                 init_game()
+                map_number = 0
+                load_map(map_number)
                 scene = "game"
 
         pygame.display.flip()

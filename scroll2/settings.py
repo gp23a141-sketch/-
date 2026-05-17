@@ -44,5 +44,5 @@ FLASH_TIME = 6
 
 FALL_DEATH_Y = floor_y + 300
 
-TIME_LIMIT = 60 * 10  # 30秒
+TIME_LIMIT = 300 * 60
 time_left = TIME_LIMIT
