@@ -106,6 +106,33 @@ enemy_base = pygame.transform.scale(
     (100, 100)
 )
 
+warp_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "warp.png")
+).convert_alpha()
+
+warp_img = pygame.transform.scale(
+    warp_img,
+    (64, 64)
+)
+
+takibi_off_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "takibi_off.png")
+).convert_alpha()
+
+takibi_off_img = pygame.transform.scale(
+    takibi_off_img,
+    (64, 64)
+)
+
+takibi_on_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "takibi_on.png")
+).convert_alpha()
+
+takibi_on_img = pygame.transform.scale(
+    takibi_on_img,
+    (64, 64)
+)
+
 # =========================================================
 # 色
 # =========================================================

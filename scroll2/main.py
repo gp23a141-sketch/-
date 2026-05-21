@@ -19,13 +19,42 @@ maps = [
     {
         "map": MAP,
         "block": BLOCK_MAP,
-        "offset": BLOCK_OFFSET_X
+        "offset": BLOCK_OFFSET_X,
+
+        # ワープ
+        "warps": [
+            {
+                "x": 3000,
+                "y": floor_y - 64,
+                "next_map": 1
+            }
+        ],
+
+        # チェックポイント
+        "checkpoints": [
+            {
+                "x": 1500,
+                "y": floor_y - 64,
+                "active": False
+           }
+        ]
     },
 
     {
         "map": MAP2,
         "block": BLOCK_MAP2,
-        "offset": BLOCK_OFFSET_X
+        "offset": BLOCK_OFFSET_X,
+
+        # 一方通行なので無し
+        "warps": [],
+
+        "checkpoints": [
+            {
+                "x": 1000,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ]
     }
 ]
 
@@ -37,6 +66,8 @@ def load_map(index):
     global BLOCK_MAP
     global BLOCK_OFFSET_X
     global goal_map_x
+    global warps
+    global checkpoints
 
     data = maps[index]
 
@@ -48,6 +79,10 @@ def load_map(index):
 
     BLOCK_MAP = data["block"]
     BLOCK_OFFSET_X = data["offset"]
+
+    warps = data["warps"]
+
+    checkpoints = data["checkpoints"]
 
     goal_map_x = len(floor) - 5
 
@@ -69,6 +104,10 @@ invincible_timer = 0
 INVINCIBLE_TIME = 120
 
 player_attr = "fire"
+
+# 復活地点
+respawn_map = 0
+respawn_x = 0
 
 # =========================================================
 # 敵
@@ -163,6 +202,7 @@ def get_damage(player_attr, enemy_attr):
 def init_game():
 
     global camera_x
+    global respawn_x
     global pl_y
     global pl_yp
     global pl_jump
@@ -174,7 +214,7 @@ def init_game():
 
     time_left = TIME_LIMIT
 
-    camera_x = 0
+    camera_x = respawn_x
 
     pl_y = floor_y
     pl_yp = 0
@@ -229,6 +269,9 @@ def game_loop():
     global map_number
 
     global time_left
+
+    global respawn_map
+    global respawn_x
 
     running = True
     timer = 0
@@ -661,6 +704,107 @@ def game_loop():
                     )
 
             # =================================================
+            # Check Point
+            # =================================================
+
+            for point in checkpoints:
+
+                screen_x = point["x"] - camera_x
+
+                point_rect = pygame.Rect(
+                    screen_x,
+                    point["y"],
+                    64,
+                    64
+                )
+
+                # ON/OFF画像切替
+                if point["active"]:
+
+                    screen.blit(
+                        takibi_on_img,
+                        point_rect
+                    )
+
+                else:
+
+                    screen.blit(
+                        takibi_off_img,
+                        point_rect
+                    )
+
+                # DEBUG
+                if DEBUG:
+
+                    pygame.draw.rect(
+                        screen,
+                        (255, 200, 0),
+                        point_rect,
+                        2
+                    )
+
+                # 接触
+                if player_rect.colliderect(point_rect):
+
+                    # まだ未点火なら
+                    if not point["active"]:
+
+                        # 全焚火OFF
+                        for p in checkpoints:
+                            p["active"] = False
+
+                        # 今の焚火ON
+                        point["active"] = True
+
+                        # 復活地点更新
+                        respawn_map = map_number
+
+                        respawn_x = max(0, point["x"] - width // 2)
+
+            # =================================================
+            # ワープ
+            # =================================================
+
+            for warp in warps:
+
+                screen_x = warp["x"] - camera_x
+
+                warp_rect = pygame.Rect(
+                    screen_x,
+                    warp["y"],
+                    64,
+                    64
+                )
+
+                screen.blit(
+                    warp_img,
+                    warp_rect
+                )
+
+                # DEBUG
+                if DEBUG:
+
+                    pygame.draw.rect(
+                        screen,
+                        (255, 0, 255),
+                        warp_rect,
+                        2
+                    )
+
+                # 当たり判定
+                if player_rect.colliderect(warp_rect):
+
+                    map_number = warp["next_map"]
+
+                    load_map(map_number)
+
+                    camera_x = 0
+
+                    reset_enemies()
+
+                    break
+
+            # =================================================
             # Princess
             # =================================================
 
@@ -765,23 +909,6 @@ def game_loop():
                 screen.blit(overlay, (0, 0))
 
             # =================================================
-            # マップ切替
-            # =================================================
-
-            if camera_x > 2000:
-
-                map_number += 1
-
-                if map_number >= len(maps):
-                    map_number = 0
-
-                load_map(map_number)
-
-                camera_x = 0
-
-                reset_enemies()
-
-            # =================================================
             # GAME OVER
             # =================================================
 
@@ -816,7 +943,14 @@ def game_loop():
 
             if keys[pygame.K_r]:
 
+                map_number = respawn_map
+
+                load_map(map_number)
+
+                camera_x = respawn_x
+
                 init_game()
+
                 scene = "game"
 
         # =================================================
