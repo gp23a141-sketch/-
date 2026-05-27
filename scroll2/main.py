@@ -8,7 +8,9 @@ from map_data import (
     BLOCK_MAP,
     BLOCK_OFFSET_X,
     MAP2,
-    BLOCK_MAP2
+    BLOCK_MAP2,
+    MAP3,
+    BLOCK_MAP3
 )
 
 # =========================================================
@@ -45,12 +47,35 @@ maps = [
         "block": BLOCK_MAP2,
         "offset": BLOCK_OFFSET_X,
 
+        # ワープ
+        "warps": [
+            {
+                "x": 2500,
+                "y": floor_y - 64,
+                "next_map": 2
+            }
+        ],
+
+        "checkpoints": [
+            {
+                "x": 1000,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ]
+    },
+
+    {
+        "map": MAP3,
+        "block": BLOCK_MAP3,
+        "offset": BLOCK_OFFSET_X,
+
         # 一方通行なので無し
         "warps": [],
 
         "checkpoints": [
             {
-                "x": 1000,
+                "x": 700,
                 "y": floor_y - 64,
                 "active": False
             }
@@ -811,7 +836,7 @@ def game_loop():
             princess_x = goal_map_x * size - camera_x -400
             princess_y = floor_y - 40
 
-            if map_number == 1:
+            if map_number == 2:
                 princess_rect = princess.get_rect(
                     center=(princess_x + size // 2, princess_y)
                 )
