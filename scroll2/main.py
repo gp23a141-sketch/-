@@ -23,7 +23,6 @@ maps = [
         "block": BLOCK_MAP,
         "offset": BLOCK_OFFSET_X,
 
-        # ワープ
         "warps": [
             {
                 "x": 3000,
@@ -32,7 +31,6 @@ maps = [
             }
         ],
 
-        # チェックポイント
         "checkpoints": [
             {
                 "x": 1500,
@@ -47,7 +45,6 @@ maps = [
         "block": BLOCK_MAP2,
         "offset": BLOCK_OFFSET_X,
 
-        # ワープ
         "warps": [
             {
                 "x": 2500,
@@ -70,7 +67,6 @@ maps = [
         "block": BLOCK_MAP3,
         "offset": BLOCK_OFFSET_X,
 
-        # 一方通行なので無し
         "warps": [],
 
         "checkpoints": [
@@ -301,7 +297,14 @@ def game_loop():
     running = True
     timer = 0
 
+    speed_state = "walk"
+    last_element = "none"
+    detected = False
+    prev_detected = False
+
     while running:
+
+        cam_surface = None
 
         timer += 1
 
@@ -413,51 +416,100 @@ def game_loop():
             if time_left <= 0:
                 scene = "gameover"
 
-            if USE_CAMERA and timer % 8 == 0:
+            if USE_CAMERA:
 
-                d, _, element, _ = pen_con.update()
+                d, pos, element, action, speed_state, debug_frame = pen_con.update()
 
-                if element != last_element:
-
+                if element in attr_colors:
                     last_element = element
-                    detected = d
 
-                else:
-                    detected = False
+                detected = d and not prev_detected
+                prev_detected = d
+
+                # ================================
+                # ワイプ用カメラ映像
+                # ================================
+
+                if debug_frame is not None:
+
+                    import cv2
+
+                    rgb_frame = cv2.cvtColor(
+                        debug_frame,
+                        cv2.COLOR_BGR2RGB
+                    )
+
+                    h, w = rgb_frame.shape[:2]
+
+                    cam_surface = pygame.image.frombuffer(
+                        rgb_frame.tobytes(),
+                        (w, h),
+                        "RGB"
+                    )
 
             else:
                 detected = False
+                d = False
+                element = "none"
+                action = "none"
+                speed_state = "walk"
 
             if last_element in attr_colors:
                 player_attr = last_element
 
             # 攻撃
-            if detected and not attack:
+            if detected and not attack and element != "purple":
 
                 attack = True
                 attack_timer = ATTACK_TIME
 
                 hit_enemies.clear()
 
-                sounds[player_attr].play()
+                if player_attr in sounds:
+                    sounds[player_attr].play()
 
-            # 移動
-            move_speed = (
-                speed * 2
-                if keys[pygame.K_LSHIFT]
-                else speed
-            )
+            # ========================================
+            # 移動速度
+            # ========================================
+
+            move_speed = RUN_SPEED if speed_state == "run" else WALK_SPEED
+
+            # ========================================
+            # 紫ペンライト移動
+            # ========================================
+
+            if d and element == "purple":
+
+                if action == "right":
+
+                    camera_x += move_speed
+
+                elif action == "left":
+
+                    camera_x = max(0, camera_x - move_speed)
+
+                elif action == "jump" and not pl_jump:
+
+                    pl_jump = True
+                    pl_yp = jump_power
+
+            # ========================================
+            # キーボード移動
+            # ========================================
 
             if keys[pygame.K_RIGHT]:
+
                 camera_x += move_speed
 
             if keys[pygame.K_LEFT]:
+
                 camera_x = max(0, camera_x - move_speed)
 
             if keys[pygame.K_SPACE] and not pl_jump:
 
                 pl_jump = True
                 pl_yp = jump_power
+
 
             # 重力
             pl_y += pl_yp
@@ -1010,6 +1062,37 @@ def game_loop():
                 map_number = 0
                 load_map(map_number)
                 scene = "game"
+
+        # =================================================
+        # カメラワイプ
+        # =================================================
+
+        if USE_CAMERA and cam_surface is not None:
+
+            CAM_SCALE = 0.45
+
+            cam_w = int(cam_surface.get_width() * CAM_SCALE)
+            cam_h = int(cam_surface.get_height() * CAM_SCALE)
+
+            scaled_cam = pygame.transform.scale(
+                cam_surface,
+                (cam_w, cam_h)
+            )
+
+            cam_x = width - cam_w
+            cam_y = 0
+
+            screen.blit(
+                scaled_cam,
+                (cam_x, cam_y)
+            )
+
+            pygame.draw.rect(
+                screen,
+                (255, 255, 255),
+                (cam_x, cam_y, cam_w, cam_h),
+                2
+            )
 
         pygame.display.flip()
         clock.tick(fps)

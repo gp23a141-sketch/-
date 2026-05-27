@@ -31,7 +31,9 @@ fps = 60
 PLAYER_W = 32
 PLAYER_H = 48
 
-speed = 10
+WALK_SPEED = 10
+RUN_SPEED = 20
+
 jump_power = -28
 gravity = 2
 

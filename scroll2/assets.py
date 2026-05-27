@@ -2,7 +2,8 @@
 
 import pygame
 import os
-import controller
+import cv2
+import controller_speed
 
 from settings import *
 
@@ -58,7 +59,7 @@ sounds = {
 # カメラ
 # =========================================================
 
-pen_con = controller.PenlightController(camera_id=0)
+pen_con = controller_speed.PenlightController(camera_id=0)
 
 last_element = "none"
 detected = False
@@ -140,5 +141,6 @@ takibi_on_img = pygame.transform.scale(
 attr_colors = {
     "fire": (255, 80, 80),
     "water": (80, 120, 255),
-    "grass": (80, 255, 120)
+    "grass": (80, 255, 120),
+    "purple": (180, 80, 255),
 }
