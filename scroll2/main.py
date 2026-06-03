@@ -10,7 +10,9 @@ from map_data import (
     MAP2,
     BLOCK_MAP2,
     MAP3,
-    BLOCK_MAP3
+    BLOCK_MAP3,
+    MAP4,
+    BLOCK_MAP4,
 )
 
 # =========================================================
@@ -65,6 +67,28 @@ maps = [
     {
         "map": MAP3,
         "block": BLOCK_MAP3,
+        "offset": BLOCK_OFFSET_X,
+
+        "warps": [
+            {
+                "x": 2500,
+                "y": floor_y - 64,
+                "next_map": 3
+            }
+        ],
+
+        "checkpoints": [
+            {
+                "x": 700,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ]
+    },
+
+    {
+        "map": MAP4,
+        "block": BLOCK_MAP4,
         "offset": BLOCK_OFFSET_X,
 
         "warps": [],
@@ -888,7 +912,7 @@ def game_loop():
             princess_x = goal_map_x * size - camera_x -400
             princess_y = floor_y - 40
 
-            if map_number == 2:
+            if map_number == 3:
                 princess_rect = princess.get_rect(
                     center=(princess_x + size // 2, princess_y)
                 )
