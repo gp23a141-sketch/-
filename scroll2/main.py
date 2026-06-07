@@ -4,6 +4,8 @@ import sys
 from settings import *
 from assets import *
 from map_data import (
+    DEMO_MAP,
+    BLOCK_MAP_DEMO,
     MAP,
     BLOCK_MAP,
     BLOCK_OFFSET_X,
@@ -20,6 +22,16 @@ from map_data import (
 # =========================================================
 
 maps = [
+    {
+        "map": DEMO_MAP,
+        "block": BLOCK_MAP_DEMO,
+        "offset": BLOCK_OFFSET_X,
+
+        "warps": [],
+
+        "checkpoints": []
+    },
+
     {
         "map": MAP,
         "block": BLOCK_MAP,
@@ -102,8 +114,11 @@ maps = [
         ]
     }
 ]
-
-map_number = 0
+demo = 1 #デモモード切替
+if demo == 1 :
+    map_number = 0
+else :
+    map_number = 1
 
 def load_map(index):
 
@@ -908,11 +923,13 @@ def game_loop():
             # =================================================
             # Princess
             # =================================================
-
-            princess_x = goal_map_x * size - camera_x -400
+            if map_number == 0:
+                princess_x = goal_map_x * size - camera_x +200
+            elif map_number == 3:
+                princess_x = goal_map_x * size - camera_x -400
             princess_y = floor_y - 40
 
-            if map_number == 3:
+            if map_number == 0 or map_number == 3:
                 princess_rect = princess.get_rect(
                     center=(princess_x + size // 2, princess_y)
                 )
