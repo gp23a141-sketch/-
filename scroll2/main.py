@@ -13,8 +13,8 @@ from map_data import (
     BLOCK_MAP2,
     MAP3,
     BLOCK_MAP3,
-    MAP4,
-    BLOCK_MAP4,
+    ROCK_MAP,
+    FIRE_MAP
 )
 
 # =========================================================
@@ -35,13 +35,15 @@ maps = [
     {
         "map": MAP,
         "block": BLOCK_MAP,
+        "rock": ROCK_MAP,
+        "fire": FIRE_MAP,
         "offset": BLOCK_OFFSET_X,
 
         "warps": [
             {
                 "x": 3000,
                 "y": floor_y - 64,
-                "next_map": 1
+                "next_map": 2
             }
         ],
 
@@ -51,6 +53,28 @@ maps = [
                 "y": floor_y - 64,
                 "active": False
            }
+        ],
+
+        "fuses": [
+            {
+                "x": 1650,
+                "y": floor_y - 64,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            }
+            # 増やしたい場合はここに追加
+        ],
+
+        "plants": [
+            {
+                "x": 2000, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            }
+            # 増やしたい場合はここに追加MAP2は下に
         ]
     },
 
@@ -63,7 +87,7 @@ maps = [
             {
                 "x": 2500,
                 "y": floor_y - 64,
-                "next_map": 2
+                "next_map": 3
             }
         ],
 
@@ -81,28 +105,6 @@ maps = [
         "block": BLOCK_MAP3,
         "offset": BLOCK_OFFSET_X,
 
-        "warps": [
-            {
-                "x": 2500,
-                "y": floor_y - 64,
-                "next_map": 3
-            }
-        ],
-
-        "checkpoints": [
-            {
-                "x": 700,
-                "y": floor_y - 64,
-                "active": False
-            }
-        ]
-    },
-
-    {
-        "map": MAP4,
-        "block": BLOCK_MAP4,
-        "offset": BLOCK_OFFSET_X,
-
         "warps": [],
 
         "checkpoints": [
@@ -114,7 +116,8 @@ maps = [
         ]
     }
 ]
-demo = 1 #デモモード切替
+
+demo = 0 #デモモード切替
 if demo == 1 :
     map_number = 0
 else :
@@ -124,10 +127,14 @@ def load_map(index):
 
     global floor
     global BLOCK_MAP
+    global ROCK_MAP
+    global FIRE_MAP
     global BLOCK_OFFSET_X
     global goal_map_x
     global warps
     global checkpoints
+    global fuses
+    global plants
 
     data = maps[index]
 
@@ -138,13 +145,30 @@ def load_map(index):
     ]
 
     BLOCK_MAP = data["block"]
+    ROCK_MAP = data.get("rock", [])
+    ROCK_MAP = [list(row) for row in ROCK_MAP]
+    FIRE_MAP = data.get("fire", [])
+    FIRE_MAP = [list(row) for row in FIRE_MAP]
+
+    if index in destroyed_rocks:
+        for (ry, rx) in destroyed_rocks[index]:
+            if ry < len(ROCK_MAP) and rx < len(ROCK_MAP[ry]):
+                ROCK_MAP[ry][rx] = "0"
+
+
     BLOCK_OFFSET_X = data["offset"]
 
     warps = data["warps"]
 
     checkpoints = data["checkpoints"]
 
+    fuses = data.get("fuses", [])
+
     goal_map_x = len(floor) - 5
+
+    plants = data.get("plants", [])
+
+destroyed_rocks = {}
 
 load_map(map_number)
 
@@ -153,6 +177,7 @@ load_map(map_number)
 # =========================================================
 
 camera_x = 0
+player_x = width // 2
 
 pl_y = floor_y
 pl_yp = 0
@@ -186,7 +211,7 @@ def reset_enemies():
         attr = attrs[i % 3]
 
         enemies.append({
-            "x": 800 + i * 400,
+            "x": 800 + i * 1600,
             "hp": ENEMY_MAX_HP,
             "max_hp": ENEMY_MAX_HP,
             "attr": attr
@@ -262,6 +287,7 @@ def get_damage(player_attr, enemy_attr):
 def init_game():
 
     global camera_x
+    global player_x
     global respawn_x
     global pl_y
     global pl_yp
@@ -271,10 +297,12 @@ def init_game():
     global player_attr
     global invincible_timer
     global time_left
+    global destroyed_rocks
 
     time_left = TIME_LIMIT
 
     camera_x = respawn_x
+    player_x = respawn_x + width // 2
 
     pl_y = floor_y
     pl_yp = 0
@@ -302,6 +330,7 @@ def game_loop():
     global scene
 
     global camera_x
+    global player_x
 
     global pl_y
     global pl_yp
@@ -336,6 +365,21 @@ def game_loop():
     running = True
     timer = 0
 
+    show_camera = True
+
+    frame_count = 0
+
+    last_camera_result = (
+        False,
+        (0, 0),
+        "none",
+        "walk",
+        False,
+        "none",
+        (0, 0),
+        None
+    )
+
     speed_state = "walk"
     last_element = "none"
     detected = False
@@ -367,6 +411,12 @@ def game_loop():
         # =================================================
 
         for event in pygame.event.get():
+
+            if event.type == pygame.KEYDOWN:
+
+                if event.key == pygame.K_TAB:
+
+                    show_camera = not show_camera
 
             if event.type == pygame.QUIT:
 
@@ -457,21 +507,24 @@ def game_loop():
 
             if USE_CAMERA:
 
-                d, pos, element, action, speed_state, debug_frame = pen_con.update()
+                frame_count += 1
 
-                if element in attr_colors:
-                    last_element = element
+                if frame_count % 2 == 0:
+                    last_camera_result = pen_con.update()
 
-                detected = d and not prev_detected
-                prev_detected = d
+                move_detected, move_pos, action, speed_state, attr_detected, attr_element, attr_pos, debug_frame = last_camera_result
+
+                if attr_element in attr_colors:
+                    last_element = attr_element
+
+                detected = attr_detected and not prev_detected
+                prev_detected = attr_detected
 
                 # ================================
                 # ワイプ用カメラ映像
                 # ================================
 
                 if debug_frame is not None:
-
-                    import cv2
 
                     rgb_frame = cv2.cvtColor(
                         debug_frame,
@@ -497,7 +550,7 @@ def game_loop():
                 player_attr = last_element
 
             # 攻撃
-            if detected and not attack and element != "purple":
+            if detected and not attack:
 
                 attack = True
                 attack_timer = ATTACK_TIME
@@ -513,39 +566,36 @@ def game_loop():
 
             move_speed = RUN_SPEED if speed_state == "run" else WALK_SPEED
 
+            old_player_x = player_x
+            rock_hit = False
+
             # ========================================
             # 紫ペンライト移動
             # ========================================
 
-            if d and element == "purple":
+            if move_detected:
 
-                if action == "right":
+                if "right" in action:
+                    player_x += move_speed
 
-                    camera_x += move_speed
+                if "left" in action:
+                    player_x = max(0, player_x - move_speed)
 
-                elif action == "left":
-
-                    camera_x = max(0, camera_x - move_speed)
-
-                elif action == "jump" and not pl_jump:
-
+                if "jump" in action and not pl_jump:
                     pl_jump = True
                     pl_yp = jump_power
 
             # ========================================
             # キーボード移動
-            # ========================================
+            # ========================================   
 
             if keys[pygame.K_RIGHT]:
-
-                camera_x += move_speed
+                player_x += move_speed
 
             if keys[pygame.K_LEFT]:
-
-                camera_x = max(0, camera_x - move_speed)
+                player_x -= move_speed
 
             if keys[pygame.K_SPACE] and not pl_jump:
-
                 pl_jump = True
                 pl_yp = jump_power
 
@@ -561,12 +611,18 @@ def game_loop():
             if invincible_timer > 0:
                 invincible_timer -= 1
 
+            # カメラ追従
+            camera_x = max(
+                0,
+                player_x - width // 2
+            )
+
             # =================================================
             # プレイヤーRect
             # =================================================
 
             player_rect = pygame.Rect(
-                width // 2 - 16,
+                player_x - camera_x - 16,
                 pl_y - 48,
                 32,
                 48
@@ -642,6 +698,181 @@ def game_loop():
                 pl_jump = True
 
             # =================================================
+            # 岩描画
+            # =================================================
+
+            for y, row in enumerate(ROCK_MAP):
+
+                for x, cell in enumerate(row):
+
+                    if cell == "1":
+
+                        bx = (
+                            x + BLOCK_OFFSET_X
+                        ) * size
+
+                        by = floor_y - (
+                            len(ROCK_MAP) - y
+                        ) * size + 22
+
+                        screen_x = bx - camera_x
+
+                        rock_rect = pygame.Rect(
+                            screen_x,
+                            by,
+                            64,
+                            64
+                        )
+
+                        # 横方向の壁判定
+                        if player_rect.colliderect(rock_rect):
+
+                            if (
+                                pl_yp >= 0
+                                and prev_bottom <= rock_rect.top
+                            ):
+                                # 上から乗る
+                                pl_y = rock_rect.top
+                                pl_yp = 0
+                                pl_jump = False
+                                on_block = True
+                                player_rect.bottom = pl_y
+
+                            elif (
+                                pl_yp < 0
+                                and player_rect.top >= rock_rect.bottom - abs(pl_yp) - 4
+                            ):
+                                # 下から頭をぶつける
+                                pl_yp = 0
+                                pl_y = rock_rect.bottom + 48
+
+                            else:
+                                rock_hit = True
+
+                        screen.blit(
+                            iwa_img,
+                            (screen_x, by)
+                        )
+
+                        pygame.draw.rect(
+                            screen,
+                            (0,255,0),
+                            (
+                                screen_x,
+                                by,
+                                64,
+                                64
+                            ),
+                            2
+                        )
+
+                        if DEBUG:
+                            pygame.draw.rect(
+                                screen,
+                                (0, 255, 0),
+                                rock_rect,
+                                2
+                            )
+
+            # 岩に当たったら移動を取り消す
+            if rock_hit:
+                player_x = old_player_x
+                player_rect.x = player_x - camera_x - 16
+
+            # =================================================
+            # 炎
+            # =================================================
+
+            for y, row in enumerate(FIRE_MAP):
+                for x, cell in enumerate(row):
+                    if cell == "1":
+
+                        bx = (x + BLOCK_OFFSET_X) * size
+                        by = floor_y - (len(FIRE_MAP) - y) * size + 22
+                        screen_x = bx - camera_x
+
+                        fire_rect = pygame.Rect(screen_x, by, 64, 64)
+
+                        # 描画
+                        screen.blit(hi_img, (screen_x, by))
+
+                        if DEBUG:
+                            pygame.draw.rect(
+                                screen,
+                                (0, 255, 0),
+                                (screen_x, by, 64, 64),
+                                2
+                            )
+
+                        # 触れたらダメージ
+                        if player_rect.colliderect(fire_rect):
+                            if invincible_timer == 0:
+                                player_hp -= 1
+                                invincible_timer = INVINCIBLE_TIME
+                                hit_stop = 8
+                                flash_timer = FLASH_TIME
+                                flash_type = "black"
+
+                        # 水属性攻撃で消す
+                        if (
+                            attack
+                            and player_attr == "water"
+                            and atk_rect.colliderect(fire_rect)
+                        ):
+                            FIRE_MAP[y][x] = "0"
+
+            # =================================================
+            # 植物
+            # =================================================
+
+            GROW_TIME = 300  # 成長後に枯れるまでの時間（フレーム）
+
+            for plant in plants:
+
+                px = plant["x"] - camera_x
+                py = plant["y"]
+
+                if plant["state"] == "small":
+
+                    plant_rect = pygame.Rect(px, py, 64, 64)
+
+                    # 描画
+                    screen.blit(kareki_img, (px, py))
+
+                    # 草属性攻撃で成長
+                    if (
+                        attack
+                        and player_attr == "grass"
+                        and atk_rect.colliderect(plant_rect)
+                    ):
+                        plant["state"] = "grown"
+                        plant["timer"] = GROW_TIME
+
+                elif plant["state"] == "grown":
+
+                    plant_rect = pygame.Rect(px - 32, py - 64, 128, 128)
+
+                    # 描画
+                    screen.blit(ki_img, (px - 32, py - 64))
+
+                    # 足場判定
+                    if player_rect.colliderect(plant_rect):
+                        if (
+                            pl_yp >= 0
+                            and prev_bottom <= plant_rect.top
+                        ):
+                            pl_y = plant_rect.top
+                            pl_yp = 0
+                            pl_jump = False
+                            on_block = True
+                            player_rect.bottom = pl_y
+
+                    # タイマー
+                    plant["timer"] -= 1
+                    if plant["timer"] <= 0:
+                        plant["state"] = "small"
+
+            # =================================================
             # DEBUG PLAYER
             # =================================================
 
@@ -673,7 +904,7 @@ def game_loop():
             # =================================================
 
             atk_rect = pygame.Rect(
-                width // 2 - 80,
+                player_x - camera_x - 80,
                 pl_y - 80,
                 160,
                 100
@@ -773,7 +1004,7 @@ def game_loop():
                 screen.blit(
                     player_imgs[ani],
                     player_imgs[ani].get_rect(
-                        center=(width // 2, pl_y -20)
+                        center=(player_x - camera_x, pl_y - 20)
                     )
                 )
 
@@ -818,6 +1049,95 @@ def game_loop():
                         tinted,
                         (screen_x, floor_y - 100)
                     )
+
+            # =================================================
+            # Fuse
+            # =================================================
+
+            for fuse in fuses:
+
+                screen_x = fuse["x"] - camera_x
+
+                fuse_rect = pygame.Rect(
+                    screen_x,
+                    fuse["y"],
+                    60,
+                    20
+                )
+
+                if (
+                    attack
+                    and player_attr == "fire"
+                    and atk_rect.colliderect(fuse_rect)
+                ):
+                    fuse["lit"] = True
+
+                if fuse["lit"] and not fuse["exploded"]:
+
+                    fuse["timer"] += 1
+
+                    if fuse["timer"] > 180:
+                        fuse["exploded"] = True
+                        fuse["explode_timer"] = 30
+                        fuse["lit"] = False
+
+                        EXPLODE_RANGE = 200
+
+                        for ry, row in enumerate(ROCK_MAP):
+                            for rx, cell in enumerate(row):
+                                if cell == "1":
+
+                                    bx = (rx + BLOCK_OFFSET_X) * size
+                                    by = floor_y - (len(ROCK_MAP) - ry) * size + 22
+
+                                    rock_cx = bx + 32
+                                    rock_cy = by + 32
+
+                                    dist = (
+                                        (fuse["x"] - rock_cx) ** 2
+                                        + (fuse["y"] - rock_cy) ** 2
+                                    ) ** 0.5
+
+                                    if dist < EXPLODE_RANGE:
+                                        ROCK_MAP[ry][rx] = "0"
+
+                                        if map_number not in destroyed_rocks:
+                                            destroyed_rocks[map_number] = set()
+                                        destroyed_rocks[map_number].add((ry, rx))
+
+                if fuse["exploded"]:
+                    fuse["explode_timer"] -= 1
+
+
+                # 描画
+                if fuse["exploded"] and fuse["explode_timer"] > 0:
+
+                    screen.blit(
+                        bakuhatu_img,
+                        (screen_x - 32, fuse["y"] - 32)
+                    )
+
+                elif fuse["lit"]:
+
+                    screen.blit(
+                        bakudan_chakka_img,
+                        fuse_rect
+                    )
+
+                else:
+
+                    screen.blit(
+                        bakudan_img,
+                        fuse_rect
+                    )  
+                    
+            fuses[:] = [
+                fuse for fuse in fuses
+                if not (
+                    fuse["exploded"]
+                    and fuse["explode_timer"] <= 0
+                )
+            ]
 
             # =================================================
             # Check Point
@@ -914,6 +1234,7 @@ def game_loop():
 
                     load_map(map_number)
 
+                    player_x = width // 2
                     camera_x = 0
 
                     reset_enemies()
@@ -1108,7 +1429,7 @@ def game_loop():
         # カメラワイプ
         # =================================================
 
-        if USE_CAMERA and cam_surface is not None:
+        if USE_CAMERA and show_camera and cam_surface is not None:
 
             CAM_SCALE = 0.45
 
