@@ -3,7 +3,7 @@
 import pygame
 import os
 import cv2
-import controller_speed
+import controller_test
 
 from settings import *
 
@@ -59,7 +59,7 @@ sounds = {
 # カメラ
 # =========================================================
 
-pen_con = controller_speed.PenlightController(camera_id=0)
+pen_con = controller_test.PenlightController(camera_id=0)
 
 last_element = "none"
 detected = False
@@ -132,6 +132,69 @@ takibi_on_img = pygame.image.load(
 takibi_on_img = pygame.transform.scale(
     takibi_on_img,
     (64, 64)
+)
+
+bakudan_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "bakudan.png")
+).convert_alpha()
+
+bakudan_img = pygame.transform.scale(
+    bakudan_img,
+    (64, 64)
+)
+
+bakudan_chakka_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "bakudan_chakka.png")
+).convert_alpha()
+
+bakudan_chakka_img = pygame.transform.scale(
+    bakudan_chakka_img,
+    (64, 64)
+)
+
+bakuhatu_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "bakuhatsu_01.png")
+).convert_alpha()
+
+bakuhatu_img = pygame.transform.scale(
+    bakuhatu_img,
+    (128, 128)
+)
+
+iwa_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "iwa.png")
+).convert_alpha()
+
+iwa_img = pygame.transform.scale(
+    iwa_img,
+    (64, 64)
+)
+
+hi_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "hi.png")
+).convert_alpha()
+
+hi_img = pygame.transform.scale(
+    hi_img,
+    (64, 64)
+)
+
+kareki_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "kareki.png")
+).convert_alpha()
+
+kareki_img = pygame.transform.scale(
+    kareki_img,
+    (64, 64)
+)
+
+ki_img = pygame.image.load(
+    os.path.join(IMAGE_DIR, "ki.png")
+).convert_alpha()
+
+ki_img = pygame.transform.scale(
+    ki_img,
+    (128, 128)
 )
 
 # =========================================================
