@@ -13,7 +13,9 @@ from map_data import (
     BLOCK_MAP2,
     MAP3,
     BLOCK_MAP3,
+    ROCK_MAP_DEMO,
     ROCK_MAP,
+    FIRE_MAP_DEMO,
     FIRE_MAP,
     FIRE_MAP_2
 )
@@ -26,11 +28,33 @@ maps = [
     {
         "map": DEMO_MAP,
         "block": BLOCK_MAP_DEMO,
+        "rock": ROCK_MAP_DEMO,
+        "fire": FIRE_MAP_DEMO,
         "offset": BLOCK_OFFSET_X,
 
         "warps": [],
 
-        "checkpoints": []
+        "checkpoints": [],
+
+        "fuses": [
+            {
+                "x": 700,
+                "y": floor_y - 64,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            }
+        ],
+
+        "plants": [
+            {
+                "x": 1000, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            }
+        ]
     },
 
     {
@@ -119,7 +143,7 @@ maps = [
     }
 ]
 
-demo = 0 #デモモード切替
+demo = 1 #デモモード切替
 if demo == 1 :
     map_number = 0
 else :
@@ -203,21 +227,21 @@ respawn_x = 0
 enemies = []
 
 def reset_enemies():
+    if map_number != 0:
+        enemies.clear()
 
-    enemies.clear()
+        attrs = ["fire", "water", "grass"]
 
-    attrs = ["fire", "water", "grass"]
+        for i in range(6):
 
-    for i in range(6):
+            attr = attrs[i % 3]
 
-        attr = attrs[i % 3]
-
-        enemies.append({
-            "x": 800 + i * 1600,
-            "hp": ENEMY_MAX_HP,
-            "max_hp": ENEMY_MAX_HP,
-            "attr": attr
-        })
+            enemies.append({
+                "x": 800 + i * 1600,
+                "hp": ENEMY_MAX_HP,
+                "max_hp": ENEMY_MAX_HP,
+                "attr": attr
+            })
 
 reset_enemies()
 
@@ -327,6 +351,7 @@ scene = "title"
 # メイン
 # =========================================================
 
+no_camera_mode = True #カメラ使わないモード
 def game_loop():
 
     global scene
@@ -552,6 +577,16 @@ def game_loop():
                 player_attr = last_element
 
             # 攻撃
+            if no_camera_mode == 1:
+                if keys[pygame.K_r]:
+                    player_attr = "fire"
+                    detected = True
+                if keys[pygame.K_g]:
+                    player_attr = "grass"
+                    detected = True
+                if keys[pygame.K_b]:
+                    player_attr = "water"
+                    detected = True
             if detected and not attack:
 
                 attack = True
