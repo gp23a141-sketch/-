@@ -18,6 +18,7 @@ from map_data import (
     FIRE_MAP_DEMO,
     FIRE_MAP,
     FIRE_MAP_2
+    
 )
 
 # =========================================================
@@ -106,7 +107,6 @@ maps = [
     {
         "map": MAP2,
         "block": BLOCK_MAP2,
-        "fire": FIRE_MAP_2,
         "offset": BLOCK_OFFSET_X,
 
         "warps": [
@@ -216,8 +216,11 @@ INVINCIBLE_TIME = 120
 
 player_attr = "fire"
 
+# 向き (True=右向き, False=左向き)
+facing_right = True
+
 # 復活地点
-respawn_map = 0
+respawn_map = map_number
 respawn_x = 0
 
 # =========================================================
@@ -227,21 +230,24 @@ respawn_x = 0
 enemies = []
 
 def reset_enemies():
-    if map_number != 0:
-        enemies.clear()
 
-        attrs = ["fire", "water", "grass"]
+    enemies.clear()
 
-        for i in range(6):
+    if map_number == 0:
+        return
 
-            attr = attrs[i % 3]
+    attrs = ["fire", "water", "grass"]
 
-            enemies.append({
-                "x": 800 + i * 1600,
-                "hp": ENEMY_MAX_HP,
-                "max_hp": ENEMY_MAX_HP,
-                "attr": attr
-            })
+    for i in range(6):
+
+        attr = attrs[i % 3]
+
+        enemies.append({
+            "x": 800 + i * 1600,
+            "hp": ENEMY_MAX_HP,
+            "max_hp": ENEMY_MAX_HP,
+            "attr": attr
+        })
 
 reset_enemies()
 
@@ -307,6 +313,29 @@ def get_damage(player_attr, enemy_attr):
     return 1
 
 # =========================================================
+# 剣の回転描画
+# =========================================================
+
+def rotate_around_pivot(image, angle, pivot, pos):
+
+    image_rect = image.get_rect(
+        topleft=(pos[0] - pivot[0], pos[1] - pivot[1])
+    )
+
+    offset = pygame.math.Vector2(pos) - image_rect.center
+    rotated_offset = offset.rotate(-angle)
+
+    rotated_center = (
+        pos[0] - rotated_offset.x,
+        pos[1] - rotated_offset.y
+    )
+
+    rotated_image = pygame.transform.rotate(image, angle)
+    rotated_rect = rotated_image.get_rect(center=rotated_center)
+
+    return rotated_image, rotated_rect
+
+# =========================================================
 # 初期化
 # =========================================================
 
@@ -324,8 +353,12 @@ def init_game():
     global invincible_timer
     global time_left
     global destroyed_rocks
+    global facing_right
 
     time_left = TIME_LIMIT
+
+    player_attr = "fire"
+    facing_right = True
 
     camera_x = respawn_x
     player_x = respawn_x + width // 2
@@ -352,6 +385,7 @@ scene = "title"
 # =========================================================
 
 no_camera_mode = True #カメラ使わないモード
+
 def game_loop():
 
     global scene
@@ -388,6 +422,8 @@ def game_loop():
 
     global respawn_map
     global respawn_x
+
+    global facing_right
 
     running = True
     timer = 0
@@ -587,6 +623,7 @@ def game_loop():
                 if keys[pygame.K_b]:
                     player_attr = "water"
                     detected = True
+
             if detected and not attack:
 
                 attack = True
@@ -614,9 +651,11 @@ def game_loop():
 
                 if "right" in action:
                     player_x += move_speed
+                    facing_right = True
 
                 if "left" in action:
                     player_x = max(0, player_x - move_speed)
+                    facing_right = False
 
                 if "jump" in action and not pl_jump:
                     pl_jump = True
@@ -628,9 +667,11 @@ def game_loop():
 
             if keys[pygame.K_RIGHT]:
                 player_x += move_speed
+                facing_right = True
 
             if keys[pygame.K_LEFT]:
                 player_x -= move_speed
+                facing_right = False
 
             if keys[pygame.K_SPACE] and not pl_jump:
                 pl_jump = True
@@ -1037,33 +1078,64 @@ def game_loop():
                 invincible_timer == 0
                 or invincible_timer % 10 < 5
             ):
+                
+                player_img = player_imgs[ani]
+
+                if not facing_right:
+                    player_img = pygame.transform.flip(player_img, True, False)
 
                 screen.blit(
-                    player_imgs[ani],
-                    player_imgs[ani].get_rect(
+                    player_img,
+                    player_img.get_rect(
                         center=(player_x - camera_x, pl_y - 20)
                     )
                 )
 
             # =================================================
-            # 攻撃エフェクト
+            # 攻撃エフェクト（剣を振るモーション）
             # =================================================
 
-            if attack and attack_timer > 7:
+            if attack:
 
-                color = attr_colors[player_attr]
+                progress = 1 - (attack_timer / ATTACK_TIME)
 
-                surf = pygame.Surface(
-                    (atk_rect.width, atk_rect.height),
-                    pygame.SRCALPHA
+                # 振る方向：上から下に振りたいなら True、下から上ならFalse
+                SWING_TOP_TO_BOTTOM = True
+
+                if SWING_TOP_TO_BOTTOM:
+                    START_ANGLE = 70
+                    END_ANGLE = -70
+                else:
+                    START_ANGLE = -70
+                    END_ANGLE = 70
+
+                angle = START_ANGLE + (END_ANGLE - START_ANGLE) * progress
+
+                base_img = sword_imgs[player_attr]
+
+                # 左向きの時だけ振る向きを反転させたい場合は True
+                MIRROR_LEFT_ANGLE = True
+
+                if facing_right:
+                    sword_img = base_img
+                    pivot = (0, base_img.get_height() // 2)
+                    draw_angle = angle
+                else:
+                    sword_img = pygame.transform.flip(base_img, True, False)
+                    pivot = (base_img.get_width(), base_img.get_height() // 2)
+                    draw_angle = -angle if MIRROR_LEFT_ANGLE else angle
+
+                hand_x = player_x - camera_x
+                hand_y = pl_y - 40
+
+                rotated_sword, sword_rect = rotate_around_pivot(
+                    sword_img,
+                    draw_angle,
+                    pivot,
+                    (hand_x, hand_y)
                 )
 
-                surf.fill((*color, 120))
-
-                screen.blit(
-                    surf,
-                    atk_rect.topleft
-                )
+                screen.blit(rotated_sword, sword_rect)
 
             # =================================================
             # 敵
@@ -1458,10 +1530,7 @@ def game_loop():
             if keys[pygame.K_r]:
 
                 init_game()
-                if demo == 1 :
-                    map_number = 0
-                else :
-                    map_number = 1
+                map_number = 0
                 load_map(map_number)
                 scene = "game"
 

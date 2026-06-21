@@ -197,6 +197,32 @@ ki_img = pygame.transform.scale(
     (128, 128)
 )
 
+sword_imgs = {
+    "fire": pygame.image.load(
+        os.path.join(IMAGE_DIR, "sword_fire.png")
+    ).convert_alpha(),
+
+    "water": pygame.image.load(
+        os.path.join(IMAGE_DIR, "sword_water.png")
+    ).convert_alpha(),
+
+    "grass": pygame.image.load(
+        os.path.join(IMAGE_DIR, "sword_grass.png")
+    ).convert_alpha(),
+}
+
+SWORD_SIZE = (90, 90)  # (幅, 高さ) お好みで調整してください
+
+sword_imgs = {
+    key: pygame.transform.scale(img, SWORD_SIZE)
+    for key, img in sword_imgs.items()
+}
+
+sword_imgs_flipped = {
+    key: pygame.transform.flip(img, True, False)
+    for key, img in sword_imgs.items()
+}
+
 # =========================================================
 # 色
 # =========================================================
