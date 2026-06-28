@@ -25,6 +25,7 @@ clock = pygame.time.Clock()
 
 font_big = pygame.font.SysFont(None, 80)
 font_mid = pygame.font.SysFont(None, 40)
+font_small = pygame.font.SysFont(None, 28)
 
 # =========================================================
 # BGM
