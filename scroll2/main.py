@@ -108,6 +108,7 @@ maps = [
         "map": MAP2,
         "block": BLOCK_MAP2,
         "offset": BLOCK_OFFSET_X,
+        "fire": FIRE_MAP_2,
 
         "warps": [
             {
@@ -1530,7 +1531,10 @@ def game_loop():
             if keys[pygame.K_r]:
 
                 init_game()
-                map_number = 0
+                if demo == 1:
+                    map_number = 0
+                else:
+                    map_number = 1
                 load_map(map_number)
                 scene = "game"
 
