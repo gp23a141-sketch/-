@@ -216,6 +216,8 @@ player_hp = PLAYER_MAX_HP
 invincible_timer = 0
 INVINCIBLE_TIME = 120
 
+player_knockback = 0
+
 player_attr = "fire"
 
 # 向き (True=右向き, False=左向き)
@@ -248,7 +250,12 @@ def reset_enemies():
             "x": 800 + i * 1600,
             "hp": ENEMY_MAX_HP,
             "max_hp": ENEMY_MAX_HP,
-            "attr": attr
+            "attr": attr,
+            "dir": -1,      
+            "speed": 2, 
+            "knockback": 0,
+            "invincible": 0
+            "move_timer": 0
         })
 
 reset_enemies()
@@ -358,6 +365,7 @@ def init_game():
     global time_left
     global destroyed_rocks
     global facing_right
+    global player_knockback
 
     global damage_numbers
 
@@ -378,6 +386,7 @@ def init_game():
 
     invincible_timer = 0
 
+    player_knockback = 0
     damage_numbers = []
 
     reset_enemies()
@@ -434,6 +443,7 @@ def game_loop():
     global facing_right
     global destroyed_rocks
     global damage_numbers
+    global player_knockback
 
     running = True
     timer = 0
@@ -687,6 +697,14 @@ def game_loop():
                 pl_jump = True
                 pl_yp = jump_power
 
+            # ノックバック更新
+            if player_knockback != 0:
+                player_x += player_knockback
+                if player_knockback > 0:
+                    player_knockback = max(0, player_knockback - 1)
+                else:
+                    player_knockback = min(0, player_knockback + 1)
+
 
             # 重力
             pl_y += pl_yp
@@ -901,6 +919,11 @@ def game_loop():
                                 flash_timer = FLASH_TIME
                                 flash_type = "black"
 
+                                # ノックバック
+                                fire_world_x = bx + 32
+                                kb_dir = 1 if player_x > fire_world_x else -1
+                                player_knockback = kb_dir * 10
+
                         # 水属性攻撃で消す
                         if (
                             attack
@@ -1010,8 +1033,24 @@ def game_loop():
 
             for enemy in enemies:
 
-                ex = enemy["x"]
+                # 無敵タイマー更新
+                if enemy["invincible"] > 0:
+                    enemy["invincible"] -= 1
 
+                # 移動・ノックバック処理
+                if enemy["knockback"] != 0:
+                    enemy["x"] += enemy["knockback"]
+                    if enemy["knockback"] > 0:
+                        enemy["knockback"] = max(0, enemy["knockback"] - 1)
+                    else:
+                        enemy["knockback"] = min(0, enemy["knockback"] + 1)
+                else:
+                    enemy["move_timer"] += 1
+                    if enemy["move_timer"] >= 120:
+                        enemy["move_timer"] = 0
+                    enemy["x"] += enemy["speed"] * enemy["dir"]
+
+                ex = enemy["x"]
                 screen_x = ex - camera_x
 
                 enemy_rect = pygame.Rect(
@@ -1024,8 +1063,8 @@ def game_loop():
                 if attack and attack_timer > 7:
 
                     if atk_rect.colliderect(enemy_rect):
-
-                        if ex not in hit_enemies:
+                                
+                        if ex not in hit_enemies and enemy["invincible"] == 0:
 
                             hit_enemies.add(ex)
 
@@ -1035,38 +1074,38 @@ def game_loop():
                             )
 
                             enemy["hp"] -= damage
+                            enemy["invincible"] = 60
+
+                            # ノックバック方向(プレイヤーと反対側)
+                            kb_dir = 1 if enemy["x"] > player_x else -1
+
+                            if damage == 3:
+                                enemy["knockback"] = kb_dir * 20
+                                feedback_text = "CRITICAL!"
+                                feedback_color = (255, 255, 0)
+                                hit_stop = 10
+                                flash_timer = FLASH_TIME
+                                flash_type = "white"
+
+                            elif damage == 1:
+                                enemy["knockback"] = kb_dir * 8
+                                feedback_text = "GOOD"
+                                feedback_color = (255, 255, 255)
+                                hit_stop = 5
+
+                            else:
+                                feedback_text = "BAD..."
+                                feedback_color = (255, 100, 180)
+
+                            feedback_timer = 20
 
                             damage_numbers.append({
-                                "x": ex - camera_x,
+                                "x": screen_x,
                                 "y": floor_y - 120,
                                 "value": damage,
                                 "timer": 40,
                                 "color": (255, 255, 0) if damage == 3 else (255, 255, 255) if damage == 1 else (180, 180, 255)
                             })
-
-                            if damage == 3:
-
-                                feedback_text = "CRITICAL!"
-                                feedback_color = (255, 255, 0)
-
-                                hit_stop = 10
-
-                                flash_timer = FLASH_TIME
-                                flash_type = "white"
-
-                            elif damage == 1:
-
-                                feedback_text = "GOOD"
-                                feedback_color = (255, 255, 255)
-
-                                hit_stop = 5
-
-                            else:
-
-                                feedback_text = "BAD..."
-                                feedback_color = (255, 100, 180)
-
-                            feedback_timer = 20
 
                 if player_rect.colliderect(enemy_rect):
 
@@ -1080,6 +1119,10 @@ def game_loop():
 
                         flash_timer = FLASH_TIME
                         flash_type = "black"
+
+                        # ノックバック
+                        kb_dir = -1 if enemy["x"] > player_x else 1
+                        player_knockback = kb_dir * 12
 
                 if enemy["hp"] > 0:
                     new_enemies.append(enemy)
@@ -1172,19 +1215,21 @@ def game_loop():
                 screen_x = enemy["x"] - camera_x
 
                 if -120 < screen_x < width:
+                        
+                    if enemy["invincible"] == 0 or enemy["invincible"] % 6 < 3:
 
-                    # 敵本体
-                    tinted = enemy_base.copy()
+                        # 敵本体
+                        tinted = enemy_base.copy()
 
-                    tinted.fill(
-                        attr_colors[enemy["attr"]],
-                        special_flags=pygame.BLEND_RGBA_MULT
-                    )
+                        tinted.fill(
+                            attr_colors[enemy["attr"]],
+                            special_flags=pygame.BLEND_RGBA_MULT
+                        )
 
-                    screen.blit(
-                        tinted,
-                        (screen_x, floor_y - 100)
-                    )
+                        screen.blit(
+                            tinted,
+                            (screen_x, floor_y - 100)
+                        )
 
                     # HPバー背景
                     pygame.draw.rect(
