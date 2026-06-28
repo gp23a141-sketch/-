@@ -1,5 +1,6 @@
 import pygame
 import sys
+import copy
 
 from settings import *
 from assets import *
@@ -144,7 +145,7 @@ maps = [
     }
 ]
 
-demo = 1 #デモモード切替
+demo = 0 #デモモード切替
 if demo == 1 :
     map_number = 0
 else :
@@ -189,7 +190,7 @@ def load_map(index):
 
     checkpoints = data["checkpoints"]
 
-    fuses = data.get("fuses", [])
+    fuses = copy.deepcopy(data.get("fuses", []))
 
     goal_map_x = len(floor) - 5
 
@@ -262,6 +263,8 @@ attack_timer = 0
 ATTACK_TIME = 12
 
 hit_enemies = set()
+
+damage_numbers = []
 
 # =========================================================
 # 演出
@@ -356,6 +359,8 @@ def init_game():
     global destroyed_rocks
     global facing_right
 
+    global damage_numbers
+
     time_left = TIME_LIMIT
 
     player_attr = "fire"
@@ -372,6 +377,8 @@ def init_game():
     player_attr = "fire"
 
     invincible_timer = 0
+
+    damage_numbers = []
 
     reset_enemies()
 
@@ -425,6 +432,8 @@ def game_loop():
     global respawn_x
 
     global facing_right
+    global destroyed_rocks
+    global damage_numbers
 
     running = True
     timer = 0
@@ -982,12 +991,20 @@ def game_loop():
             # 攻撃
             # =================================================
 
-            atk_rect = pygame.Rect(
-                player_x - camera_x - 80,
-                pl_y - 80,
-                160,
-                100
-            )
+            if facing_right:
+                atk_rect = pygame.Rect(
+                    player_x - camera_x,
+                    pl_y - 80,
+                    160,
+                    100
+                )
+            else:
+                atk_rect = pygame.Rect(
+                    player_x - camera_x - 160,
+                    pl_y - 80,
+                    160,
+                    100
+                )
 
             new_enemies = []
 
@@ -1018,6 +1035,14 @@ def game_loop():
                             )
 
                             enemy["hp"] -= damage
+
+                            damage_numbers.append({
+                                "x": ex - camera_x,
+                                "y": floor_y - 120,
+                                "value": damage,
+                                "timer": 40,
+                                "color": (255, 255, 0) if damage == 3 else (255, 255, 255) if damage == 1 else (180, 180, 255)
+                            })
 
                             if damage == 3:
 
@@ -1138,7 +1163,7 @@ def game_loop():
 
                 screen.blit(rotated_sword, sword_rect)
 
-            # =================================================
+           # =================================================
             # 敵
             # =================================================
 
@@ -1148,6 +1173,7 @@ def game_loop():
 
                 if -120 < screen_x < width:
 
+                    # 敵本体
                     tinted = enemy_base.copy()
 
                     tinted.fill(
@@ -1159,6 +1185,45 @@ def game_loop():
                         tinted,
                         (screen_x, floor_y - 100)
                     )
+
+                    # HPバー背景
+                    pygame.draw.rect(
+                        screen,
+                        (80, 80, 80),
+                        (screen_x, floor_y - 115, 100, 8)
+                    )
+
+                    # HPバー本体
+                    hp_ratio = max(0, enemy["hp"] / enemy["max_hp"])
+
+                    pygame.draw.rect(
+                        screen,
+                        (220, 50, 50),
+                        (screen_x, floor_y - 115, int(100 * hp_ratio), 8)
+                    )
+
+            # ダメージ数値の更新と描画
+            for dn in damage_numbers:
+
+                dn["timer"] -= 1
+                dn["y"] -= 1  # 上に流れる
+
+                alpha = max(0, int(255 * (dn["timer"] / 40)))
+
+                txt_surf = font_mid.render(
+                    str(dn["value"]),
+                    True,
+                    dn["color"]
+                )
+
+                txt_surf.set_alpha(alpha)
+
+                screen.blit(txt_surf, (dn["x"], dn["y"]))
+
+            damage_numbers[:] = [
+                dn for dn in damage_numbers
+                if dn["timer"] > 0
+            ]
 
             # =================================================
             # Fuse
@@ -1529,6 +1594,10 @@ def game_loop():
             )
 
             if keys[pygame.K_r]:
+
+                destroyed_rocks = {}
+                respawn_map = map_number
+                respawn_x = 0
 
                 init_game()
                 if demo == 1:
