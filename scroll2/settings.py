@@ -37,7 +37,7 @@ RUN_SPEED = 20
 jump_power = -28
 gravity = 2
 
-PLAYER_MAX_HP = 5
+PLAYER_MAX_HP = 100
 ENEMY_MAX_HP = 3
 
 INVINCIBLE_TIME = 120

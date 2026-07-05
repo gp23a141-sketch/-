@@ -4,6 +4,10 @@ import copy
 
 from settings import *
 from assets import *
+
+BOSS_SIZE = 150
+boss_base = pygame.transform.scale(enemy_base, (BOSS_SIZE, BOSS_SIZE))
+
 from map_data import (
     DEMO_MAP,
     BLOCK_MAP_DEMO,
@@ -18,8 +22,9 @@ from map_data import (
     ROCK_MAP,
     FIRE_MAP_DEMO,
     FIRE_MAP,
-    FIRE_MAP_2
-    
+    FIRE_MAP_2,
+    BOSS_MAP,       
+    BLOCK_MAP_BOSS,    
 )
 
 # =========================================================
@@ -133,7 +138,13 @@ maps = [
         "block": BLOCK_MAP3,
         "offset": BLOCK_OFFSET_X,
 
-        "warps": [],
+        "warps": [
+            {
+                "x": 2400,      
+                "y": floor_y - 64,
+                "next_map": 4
+            }
+        ],
 
         "checkpoints": [
             {
@@ -142,6 +153,20 @@ maps = [
                 "active": False
             }
         ]
+    },
+
+    {
+        "map": BOSS_MAP,
+        "block": BLOCK_MAP_BOSS,
+        "offset": BLOCK_OFFSET_X,
+        "warps": [],
+        "checkpoints": [
+            {
+                "x": 300,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ],
     }
 ]
 
@@ -227,6 +252,10 @@ facing_right = True
 respawn_map = map_number
 respawn_x = 0
 
+#bossステータス
+BOSS_MAX_HP = 30
+boss = None
+
 # =========================================================
 # 敵
 # =========================================================
@@ -237,7 +266,7 @@ def reset_enemies():
 
     enemies.clear()
 
-    if map_number == 0:
+    if map_number == 0 or map_number == 4:
         return
 
     attrs = ["fire", "water", "grass"]
@@ -255,7 +284,7 @@ def reset_enemies():
             "speed": 2, 
             "knockback": 0,
             "invincible": 0,
-            "move_timer": 0
+            "move_timer": 0,
         })
 
 reset_enemies()
@@ -347,6 +376,28 @@ def rotate_around_pivot(image, angle, pivot, pos):
     return rotated_image, rotated_rect
 
 # =========================================================
+# ボス初期化
+# =========================================================
+
+def init_boss():
+    global boss
+    boss = {
+        "x": width + 300,
+        "hp": BOSS_MAX_HP,
+        "max_hp": BOSS_MAX_HP,
+        "attr": "fire",
+        "attr_timer": 0,
+        "state": "patrol",
+        "dir": -1,
+        "move_timer": 0,
+        "knockback": 0,
+        "invincible": 0,
+        "charge_cooldown": 0,
+        "phase": 1,
+        "phase_changed": False
+    }
+
+# =========================================================
 # 初期化
 # =========================================================
 
@@ -366,6 +417,7 @@ def init_game():
     global destroyed_rocks
     global facing_right
     global player_knockback
+    global boss
 
     global damage_numbers
 
@@ -388,6 +440,9 @@ def init_game():
 
     player_knockback = 0
     damage_numbers = []
+
+    if map_number == 4:
+        init_boss()
 
     reset_enemies()
 
@@ -444,6 +499,7 @@ def game_loop():
     global destroyed_rocks
     global damage_numbers
     global player_knockback
+    global boss
 
     running = True
     timer = 0
@@ -811,7 +867,7 @@ def game_loop():
             if not on_block and pl_y < floor_y:
 
                 pl_jump = True
-            
+
             # 壁に当たったら移動を取り消す
             if block_hit:
                 player_x = old_player_x
@@ -1061,6 +1117,7 @@ def game_loop():
                 else:
                     enemy["move_timer"] += 1
                     if enemy["move_timer"] >= 120:
+                        enemy["dir"] *= -1
                         enemy["move_timer"] = 0
                     enemy["x"] += enemy["speed"] * enemy["dir"]
 
@@ -1285,6 +1342,167 @@ def game_loop():
             ]
 
             # =================================================
+            # ボス
+            # =================================================
+
+            if map_number == 4 and boss is not None:
+
+                # 第2形態移行チェック
+                if boss["hp"] <= boss["max_hp"] // 2 and boss["phase"] == 1:
+                    boss["phase"] = 2
+                    boss["phase_changed"] = True
+                    boss["attr"] = "fire"
+                    boss["attr_timer"] = 0
+                    flash_timer = FLASH_TIME * 5
+                    flash_type = "white"
+                    feedback_text = "PHASE 2!"
+                    feedback_color = (255, 50, 50)
+                    feedback_timer = 60
+
+                # 属性サイクル(第2形態のみ、120フレームごと)
+                if boss["phase"] == 2:
+                    boss["attr_timer"] += 1
+                    if boss["attr_timer"] >= 120:
+                        boss["attr_timer"] = 0
+                        attrs_cycle = ["fire", "water", "grass"]
+                        idx = attrs_cycle.index(boss["attr"])
+                        boss["attr"] = attrs_cycle[(idx + 1) % 3]
+
+                # 無敵タイマー
+                if boss["invincible"] > 0:
+                    boss["invincible"] -= 1
+
+                # ノックバック
+                if boss["knockback"] != 0:
+                    boss["x"] += boss["knockback"]
+                    if boss["knockback"] > 0:
+                        boss["knockback"] = max(0, boss["knockback"] - 1)
+                    else:
+                        boss["knockback"] = min(0, boss["knockback"] + 1)
+
+                elif boss["state"] == "patrol":
+
+                    if boss["phase"] == 1:
+                        patrol_speed = 3
+                        charge_distance = 400
+                    else:
+                        patrol_speed = 6
+                        charge_distance = 600
+
+                    boss["move_timer"] += 1
+                    if boss["move_timer"] >= 120:
+                        boss["dir"] *= -1
+                        boss["move_timer"] = 0
+                    boss["x"] += patrol_speed * boss["dir"]
+
+                    if abs(boss["x"] - player_x) < charge_distance and boss["charge_cooldown"] == 0:
+                        boss["state"] = "charge"
+                        boss["dir"] = 1 if player_x > boss["x"] else -1
+
+                elif boss["state"] == "charge":
+                    charge_speed = 15 if boss["phase"] == 1 else 22
+                    boss["x"] += charge_speed * boss["dir"]
+                    if (
+                        (boss["dir"] == 1 and boss["x"] > player_x + 200)
+                        or (boss["dir"] == -1 and boss["x"] < player_x - 200)
+                    ):
+                        boss["state"] = "cooldown"
+                        boss["charge_cooldown"] = 120 if boss["phase"] == 1 else 50
+
+                if boss["charge_cooldown"] > 0:
+                    boss["charge_cooldown"] -= 1
+                    if boss["charge_cooldown"] == 0 and boss["state"] == "cooldown":
+                        boss["state"] = "patrol"
+
+                boss_screen_x = boss["x"] - camera_x
+
+                boss_rect = pygame.Rect(
+                    boss_screen_x,
+                    floor_y - BOSS_SIZE,
+                    BOSS_SIZE,
+                    BOSS_SIZE
+                )
+
+                # 攻撃ヒット判定
+                if attack and attack_timer > 7:
+                    if atk_rect.colliderect(boss_rect) and boss["invincible"] == 0:
+
+                        damage = get_damage(player_attr, boss["attr"])
+                        boss["hp"] -= damage
+                        boss["invincible"] = 60
+
+                        kb_dir = 1 if boss["x"] > player_x else -1
+
+                        if damage == 3:
+                            boss["knockback"] = kb_dir * 20
+                            feedback_text = "CRITICAL!"
+                            feedback_color = (255, 255, 0)
+                            hit_stop = 10
+                            flash_timer = FLASH_TIME
+                            flash_type = "white"
+                        elif damage == 1:
+                            boss["knockback"] = kb_dir * 8
+                            feedback_text = "GOOD"
+                            feedback_color = (255, 255, 255)
+                            hit_stop = 5
+                        else:
+                            feedback_text = "BAD..."
+                            feedback_color = (255, 100, 180)
+
+                        feedback_timer = 20
+
+                        damage_numbers.append({
+                            "x": boss_screen_x,
+                            "y": floor_y - BOSS_SIZE - 20,
+                            "value": damage,
+                            "timer": 40,
+                            "color": (255, 255, 0) if damage == 3 else (255, 255, 255) if damage == 1 else (180, 180, 255)
+                        })
+
+                # プレイヤーへのダメージ
+                if player_rect.colliderect(boss_rect):
+                    if invincible_timer == 0:
+                        player_hp -= 2
+                        invincible_timer = INVINCIBLE_TIME
+                        hit_stop = 8
+                        flash_timer = FLASH_TIME
+                        flash_type = "black"
+                        kb_dir = -1 if boss["x"] > player_x else 1
+                        player_knockback = kb_dir * 15
+
+                # ボス描画
+                if -BOSS_SIZE < boss_screen_x < width:
+                    if boss["invincible"] == 0 or boss["invincible"] % 6 < 3:
+                        boss_surf = boss_base.copy()
+                        boss_surf.fill(
+                            attr_colors[boss["attr"]],
+                            special_flags=pygame.BLEND_RGBA_MULT
+                        )
+                        screen.blit(boss_surf, (boss_screen_x, floor_y - BOSS_SIZE))
+
+                # ボスHPバー(画面上部中央)
+                bar_w = 300
+                bar_x = width // 2 - bar_w // 2
+                bar_y = 20
+                pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_w, 20))
+                hp_ratio = max(0, boss["hp"] / boss["max_hp"])
+
+                # 第1形態は赤、第2形態はオレンジ
+                bar_color = (220, 50, 50) if boss["phase"] == 1 else (255, 140, 0)
+                pygame.draw.rect(screen, bar_color, (bar_x, bar_y, int(bar_w * hp_ratio), 20))
+
+                phase_label = font_mid.render(
+                    f"BOSS  PHASE {boss['phase']}",
+                    True,
+                    (255, 255, 255)
+                )
+                screen.blit(phase_label, (bar_x - 10, bar_y - 30))
+
+                # ボス撃破
+                if boss["hp"] <= 0:
+                    scene = "clear"
+
+            # =================================================
             # Fuse
             # =================================================
 
@@ -1473,18 +1691,19 @@ def game_loop():
 
                     reset_enemies()
 
+                    if map_number == 4:
+                        init_boss()
+
                     break
 
             # =================================================
             # Princess
             # =================================================
             if map_number == 0:
-                princess_x = goal_map_x * size - camera_x +200
-            elif map_number == 3:
-                princess_x = goal_map_x * size - camera_x -400
+                princess_x = goal_map_x * size - camera_x + 200
             princess_y = floor_y - 40
 
-            if map_number == 0 or map_number == 3:
+            if map_number == 0:
                 princess_rect = princess.get_rect(
                     center=(princess_x + size // 2, princess_y)
                 )
