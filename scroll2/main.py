@@ -254,7 +254,7 @@ def reset_enemies():
             "dir": -1,      
             "speed": 2, 
             "knockback": 0,
-            "invincible": 0
+            "invincible": 0,
             "move_timer": 0
         })
 
@@ -662,6 +662,7 @@ def game_loop():
 
             old_player_x = player_x
             rock_hit = False
+            block_hit = False
 
             # ========================================
             # 紫ペンライト移動
@@ -772,15 +773,23 @@ def game_loop():
                                 pl_yp >= 0
                                 and prev_bottom <= block_rect.top
                             ):
-
+                                #上から乗る
                                 pl_y = block_rect.top
-
                                 pl_yp = 0
                                 pl_jump = False
-
                                 on_block = True
-
                                 player_rect.bottom = pl_y
+
+                            elif(
+                                pl_yp < 0
+                                and player_rect.top >= block_rect.bottom - abs(pl_yp)-4
+                            ):
+                                #下から頭をぶつける
+                                pl_yp = 0
+                                pl_y = block_rect.bottom + 48
+
+                            else:
+                                block_hit = True
                         
 
                         # ブロック描画
@@ -802,6 +811,11 @@ def game_loop():
             if not on_block and pl_y < floor_y:
 
                 pl_jump = True
+            
+            # 壁に当たったら移動を取り消す
+            if block_hit:
+                player_x = old_player_x
+                player_rect.x = player_x - camera_x - 16
 
             # =================================================
             # 岩描画
