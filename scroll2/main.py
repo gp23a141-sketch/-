@@ -20,6 +20,7 @@ from map_data import (
     BLOCK_MAP3,
     ROCK_MAP_DEMO,
     ROCK_MAP,
+    ROCK_MAP_2,
     FIRE_MAP_DEMO,
     FIRE_MAP,
     FIRE_MAP_2,
@@ -115,6 +116,7 @@ maps = [
         "block": BLOCK_MAP2,
         "offset": BLOCK_OFFSET_X,
         "fire": FIRE_MAP_2,
+        "rock": ROCK_MAP_2,
 
         "warps": [
             {
@@ -130,7 +132,28 @@ maps = [
                 "y": floor_y - 64,
                 "active": False
             }
+        ],
+
+        "fuses": [
+            {
+                "x": 1400,
+                "y": floor_y - 100,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            },
+            {
+                "x": 1650,
+                "y": floor_y - 160,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            }
+            # 増やしたい場合はここに追加
         ]
+
     },
 
     {
@@ -152,6 +175,34 @@ maps = [
                 "y": floor_y - 64,
                 "active": False
             }
+        ],
+
+        "plants": [
+            {
+                "x": 800, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 1250, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 1600, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 2000, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            # 増やしたい場合はここに追加MAP2は下に
         ]
     },
 
