@@ -260,6 +260,7 @@ boss = None
 # 敵
 # =========================================================
 
+defeated_enemies = {} 
 enemies = []
 
 def reset_enemies():
@@ -271,7 +272,12 @@ def reset_enemies():
 
     attrs = ["fire", "water", "grass"]
 
+    defeated = defeated_enemies.get(map_number, set())
+
     for i in range(6):
+
+        if i in defeated:
+            continue
 
         attr = attrs[i % 3]
 
@@ -285,6 +291,7 @@ def reset_enemies():
             "knockback": 0,
             "invincible": 0,
             "move_timer": 0,
+            "index": i,
         })
 
 reset_enemies()
@@ -301,6 +308,8 @@ ATTACK_TIME = 12
 hit_enemies = set()
 
 damage_numbers = []
+
+score = 0
 
 # =========================================================
 # 演出
@@ -418,8 +427,10 @@ def init_game():
     global facing_right
     global player_knockback
     global boss
+    global score
 
     global damage_numbers
+    global score
 
     time_left = TIME_LIMIT
 
@@ -451,6 +462,7 @@ def init_game():
 # =========================================================
 
 scene = "title"
+retry_wait = 0
 
 # =========================================================
 # メイン
@@ -500,6 +512,9 @@ def game_loop():
     global damage_numbers
     global player_knockback
     global boss
+    global score
+    global defeated_enemies
+    global retry_wait
 
     running = True
     timer = 0
@@ -1197,6 +1212,12 @@ def game_loop():
 
                 if enemy["hp"] > 0:
                     new_enemies.append(enemy)
+                else:
+                    score += 100
+
+                    if map_number not in defeated_enemies:  # ← 追加
+                        defeated_enemies[map_number] = set()  # ← 追加
+                    defeated_enemies[map_number].add(enemy["index"])
 
             enemies[:] = new_enemies
 
@@ -1500,6 +1521,7 @@ def game_loop():
 
                 # ボス撃破
                 if boss["hp"] <= 0:
+                    score += 1000
                     scene = "clear"
 
             # =================================================
@@ -1759,6 +1781,13 @@ def game_loop():
 
             screen.blit(txt, (50, 80))
 
+            score_txt = font_mid.render(
+                f"SCORE: {score}",
+                True,
+                (255, 255, 255)
+            )
+            screen.blit(score_txt, (50, 110))
+
             # =================================================
             # フィードバック
             # =================================================
@@ -1824,14 +1853,8 @@ def game_loop():
                 (width // 2 - 220, height // 2 - 100)
             )
 
-            screen.blit(
-                font_mid.render(
-                    "Press R to Retry",
-                    True,
-                    (255, 255, 255)
-                ),
-                (width // 2 - 150, height // 2)
-            )
+            if retry_wait > 0:
+                retry_wait -= 1
 
             if keys[pygame.K_r]:
 
@@ -1862,20 +1885,46 @@ def game_loop():
                 (width // 2 - 250, height // 2 - 100)
             )
 
+            time_bonus = time_left // 60 * 10
+            total_score = score + time_bonus
+
             screen.blit(
                 font_mid.render(
-                    "Press R to Retry",
+                    f"SCORE: {score}",
                     True,
                     (255, 255, 255)
                 ),
-                (width // 2 - 150, height // 2)
+                (width // 2 - 100, height // 2 - 20)
             )
+
+            screen.blit(
+                font_mid.render(
+                    f"TIME BONUS: +{time_bonus}",
+                    True,
+                    (255, 255, 100)
+                ),
+                (width // 2 - 100, height // 2 + 20)
+            )
+
+            screen.blit(
+                font_big.render(
+                    f"TOTAL: {total_score}",
+                    True,
+                    (255, 200, 0)
+                ),
+                (width // 2 - 150, height // 2 + 60)
+            )
+
+            if retry_wait > 0:
+                retry_wait -= 1 
 
             if keys[pygame.K_r]:
 
                 destroyed_rocks = {}
+                defeated_enemies = {}
                 respawn_map = map_number
                 respawn_x = 0
+                score = 0
 
                 init_game()
                 if demo == 1:
