@@ -14,7 +14,9 @@ from settings import *
 pygame.init()
 pygame.mixer.init()
 
-screen = pygame.display.set_mode((width, height))
+screen_size = (1200,700)
+
+screen = pygame.display.set_mode((0,0),pygame.FULLSCREEN)
 pygame.display.set_caption("My Action Game")
 
 clock = pygame.time.Clock()
@@ -60,7 +62,7 @@ sounds = {
 # カメラ
 # =========================================================
 
-pen_con = controller_test.PenlightController(camera_id=0)
+pen_con = controller_test.PenlightController(camera_id=1)
 
 last_element = "none"
 detected = False

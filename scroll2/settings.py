@@ -7,7 +7,7 @@ import os
 # =========================================================
 
 USE_CAMERA = True
-DEBUG = True
+DEBUG = False
 
 # =========================================================
 # パス
@@ -22,7 +22,7 @@ IMAGE_DIR = os.path.join(BASE_DIR, "image")
 # 基本設定
 # =========================================================
 
-width, height = 1200, 720
+width, height = 1200, 700
 
 floor_y = 600
 size = 24
@@ -31,8 +31,8 @@ fps = 60
 PLAYER_W = 32
 PLAYER_H = 48
 
-WALK_SPEED = 10
-RUN_SPEED = 20
+WALK_SPEED = 2
+RUN_SPEED = 10
 
 jump_power = -28
 gravity = 2

@@ -196,7 +196,7 @@ class PenlightController:
 
 if __name__ == "__main__":
     print("カメラ起動中... 'q' で終了")
-    controller = PenlightController(camera_id=0)
+    controller = PenlightController(camera_id=1)
 
     try:
         while True:

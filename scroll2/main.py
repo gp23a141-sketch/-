@@ -185,13 +185,13 @@ maps = [
                 "small"
             },
             {
-                "x": 1220, 
+                "x": 1250, 
                 "y": floor_y - 64, 
                 "state": 
                 "small"
             },
             {
-                "x": 1620, 
+                "x": 1600, 
                 "y": floor_y - 64, 
                 "state": 
                 "small"
@@ -513,7 +513,6 @@ def init_game():
 # =========================================================
 
 scene = "title"
-retry_wait = 0
 
 # =========================================================
 # メイン
@@ -565,7 +564,6 @@ def game_loop():
     global boss
     global score
     global defeated_enemies
-    global retry_wait
 
     running = True
     timer = 0
@@ -674,7 +672,7 @@ def game_loop():
             screen.blit(overlay, (0, 0))
 
             title = font_big.render(
-                "My Action Game",
+                "Princess Quest",
                 True,
                 (255, 255, 255)
             )
@@ -687,7 +685,7 @@ def game_loop():
             if (timer // 30) % 2 == 0:
 
                 txt = font_mid.render(
-                    "Click to Start",
+                    "Click to Start!!",
                     True,
                     (200, 200, 200)
                 )
@@ -1904,9 +1902,6 @@ def game_loop():
                 (width // 2 - 220, height // 2 - 100)
             )
 
-            if retry_wait > 0:
-                retry_wait -= 1
-
             if keys[pygame.K_r]:
 
                 map_number = respawn_map
@@ -1966,9 +1961,6 @@ def game_loop():
                 (width // 2 - 150, height // 2 + 60)
             )
 
-            if retry_wait > 0:
-                retry_wait -= 1 
-
             if keys[pygame.K_r]:
 
                 destroyed_rocks = {}
@@ -1991,7 +1983,7 @@ def game_loop():
 
         if USE_CAMERA and show_camera and cam_surface is not None:
 
-            CAM_SCALE = 0.45
+            CAM_SCALE = 0.25
 
             cam_w = int(cam_surface.get_width() * CAM_SCALE)
             cam_h = int(cam_surface.get_height() * CAM_SCALE)
