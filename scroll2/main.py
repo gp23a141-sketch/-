@@ -185,13 +185,13 @@ maps = [
                 "small"
             },
             {
-                "x": 1250, 
+                "x": 1220, 
                 "y": floor_y - 64, 
                 "state": 
                 "small"
             },
             {
-                "x": 1600, 
+                "x": 1620, 
                 "y": floor_y - 64, 
                 "state": 
                 "small"
