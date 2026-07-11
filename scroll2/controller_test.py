@@ -157,9 +157,9 @@ class PenlightController:
         action, speed = self.get_action(move_pos, move_detected, center_x, center_y)
 
         # --- 描画処理 ---
-        cv2.line(frame, (center_x - self.deadzone_x, 0), (center_x - self.deadzone_x, h), (150, 150, 150), 1)
-        cv2.line(frame, (center_x + self.deadzone_x, 0), (center_x + self.deadzone_x, h), (150, 150, 150), 1)
-        cv2.line(frame, (0, center_y + self.deadzone_y), (w, center_y + self.deadzone_y), (150, 150, 150), 1)
+        cv2.line(frame, (center_x - self.deadzone_x, 0), (center_x - self.deadzone_x, h), (150, 150, 150), 10)
+        cv2.line(frame, (center_x + self.deadzone_x, 0), (center_x + self.deadzone_x, h), (150, 150, 150), 10)
+        cv2.line(frame, (0, center_y + self.deadzone_y), (w, center_y + self.deadzone_y), (150, 150, 150), 10)
 
         def draw_ui_text(img, text, y_pos, color):
             cv2.putText(img, text, (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)

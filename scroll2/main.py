@@ -4,6 +4,7 @@ import copy
 
 from settings import *
 from assets import *
+from ranking import *
 
 BOSS_SIZE = 150
 boss_base = pygame.transform.scale(enemy_base, (BOSS_SIZE, BOSS_SIZE))
@@ -222,7 +223,7 @@ maps = [
 ]
 
 demo = 0 #デモモード切替
-if demo == 1 :
+if demo == 0 :
     map_number = 0
 else :
     map_number = 1
@@ -304,7 +305,7 @@ respawn_map = map_number
 respawn_x = 0
 
 #bossステータス
-BOSS_MAX_HP = 30
+BOSS_MAX_HP = 100
 boss = None
 
 # =========================================================
@@ -822,11 +823,11 @@ def game_loop():
             # ========================================   
 
             if keys[pygame.K_RIGHT]:
-                player_x += move_speed
+                player_x += RUN_SPEED
                 facing_right = True
 
             if keys[pygame.K_LEFT]:
-                player_x -= move_speed
+                player_x -= RUN_SPEED
                 facing_right = False
 
             if keys[pygame.K_SPACE] and not pl_jump:
@@ -1085,7 +1086,7 @@ def game_loop():
             # 植物
             # =================================================
 
-            GROW_TIME = 300  # 成長後に枯れるまでの時間（フレーム）
+            GROW_TIME = 10000  # 成長後に枯れるまでの時間（フレーム）
 
             for plant in plants:
 
@@ -1447,7 +1448,7 @@ def game_loop():
                 # 属性サイクル(第2形態のみ、120フレームごと)
                 if boss["phase"] == 2:
                     boss["attr_timer"] += 1
-                    if boss["attr_timer"] >= 120:
+                    if boss["attr_timer"] >= 360:
                         boss["attr_timer"] = 0
                         attrs_cycle = ["fire", "water", "grass"]
                         idx = attrs_cycle.index(boss["attr"])
@@ -1547,9 +1548,9 @@ def game_loop():
                 # プレイヤーへのダメージ
                 if player_rect.colliderect(boss_rect):
                     if invincible_timer == 0:
-                        player_hp -= 2
+                        player_hp -= 3
                         invincible_timer = INVINCIBLE_TIME
-                        hit_stop = 8
+                        hit_stop = 15
                         flash_timer = FLASH_TIME
                         flash_type = "black"
                         kb_dir = -1 if boss["x"] > player_x else 1
@@ -1567,7 +1568,7 @@ def game_loop():
 
                 # ボスHPバー(画面上部中央)
                 bar_w = 300
-                bar_x = width // 2 - bar_w // 2
+                bar_x = width // 2 - bar_w // 2 -200
                 bar_y = 20
                 pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_w, 20))
                 hp_ratio = max(0, boss["hp"] / boss["max_hp"])
@@ -1917,6 +1918,15 @@ def game_loop():
                 (width // 2 - 220, height // 2 - 100)
             )
 
+            screen.blit(
+                font_mid.render(
+                    f"SCORE: {score}",
+                    True,
+                    (255, 255, 255)
+                ),
+                (width // 2 - 100, height // 2 - 20)
+            )
+
             if keys[pygame.K_r]:
 
                 map_number = respawn_map
@@ -1998,7 +2008,7 @@ def game_loop():
 
         if USE_CAMERA and show_camera and cam_surface is not None:
 
-            CAM_SCALE = 0.35
+            CAM_SCALE = 0.45
 
             cam_w = int(cam_surface.get_width() * CAM_SCALE)
             cam_h = int(cam_surface.get_height() * CAM_SCALE)
