@@ -23,9 +23,9 @@ clock = pygame.time.Clock()
 # フォント
 # =========================================================
 
-font_big = pygame.font.SysFont(None, 80)
-font_mid = pygame.font.SysFont(None, 40)
-font_small = pygame.font.SysFont(None, 28)
+font_big = pygame.font.SysFont("meiryo", 80)
+font_mid = pygame.font.SysFont("meiryo", 40)
+font_small = pygame.font.SysFont("meiryo", 28)
 
 # =========================================================
 # BGM

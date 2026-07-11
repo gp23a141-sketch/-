@@ -1,10 +1,10 @@
 import pygame
 import sys
 import copy
+import json
 
 from settings import *
 from assets import *
-from ranking import *
 
 BOSS_SIZE = 150
 boss_base = pygame.transform.scale(enemy_base, (BOSS_SIZE, BOSS_SIZE))
@@ -278,6 +278,54 @@ destroyed_rocks = {}
 load_map(map_number)
 
 # =========================================================
+# ランキング
+# =========================================================
+
+RANKING_FILE = "ranking.json"
+RANKING_MAX = 10
+
+def load_ranking():
+    try:
+        with open(RANKING_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def save_ranking(ranking_list):
+    with open(RANKING_FILE, "w", encoding="utf-8") as f:
+        json.dump(ranking_list, f, ensure_ascii=False, indent=2)
+
+def add_ranking(name, score_value):
+    ranking_list = load_ranking()
+    ranking_list.append({"name": name, "score": score_value})
+    ranking_list.sort(key=lambda r: r["score"], reverse=True)
+    ranking_list = ranking_list[:RANKING_MAX]
+    save_ranking(ranking_list)
+    return ranking_list
+
+# =========================================================
+# チュートリアル看板
+# =========================================================
+
+tutorial_signs = [
+    {
+        "x": 300,
+        "y": floor_y - 64,
+        "lines": ["紫色のペンライトを左右に動かして移動、振ると早くなる!", "下に持ってくるとジャンプ!"]
+    },
+    {
+        "x": 600,
+        "y": floor_y - 64,
+        "lines": ["ペンライトの1火、2水、3草ボタンで属性切替", "振ると攻撃！", "爆弾は火、火には水、枯れ木には草を使い分けよう!"]
+    },
+    {
+        "x": 900,
+        "y": floor_y - 64,
+        "lines": ["火は草に強く水に弱い", "三すくみを使い分けよう!"]
+    },
+]
+
+# =========================================================
 # プレイヤー
 # =========================================================
 
@@ -302,10 +350,10 @@ facing_right = True
 
 # 復活地点
 respawn_map = map_number
-respawn_x = 0
+respawn_x = -300
 
 #bossステータス
-BOSS_MAX_HP = 100
+BOSS_MAX_HP =200
 boss = None
 
 # =========================================================
@@ -455,7 +503,9 @@ def init_boss():
         "invincible": 0,
         "charge_cooldown": 0,
         "phase": 1,
-        "phase_changed": False
+        "phase_changed": False,
+        "crit_count": 0,
+        "stun_timer": 0,
     }
 
 # =========================================================
@@ -483,6 +533,7 @@ def init_game():
 
     global damage_numbers
     global score
+    global princess_touched
 
     time_left = TIME_LIMIT
 
@@ -503,6 +554,7 @@ def init_game():
 
     player_knockback = 0
     damage_numbers = []
+    princess_touched = False
 
     if map_number == 4:
         init_boss()
@@ -514,6 +566,9 @@ def init_game():
 # =========================================================
 
 scene = "title"
+
+input_name = ""
+INPUT_MAX_LEN = 8
 
 # =========================================================
 # メイン
@@ -565,7 +620,9 @@ def game_loop():
     global boss
     global score
     global defeated_enemies
+    global input_name
     global screen
+    global princess_touched
 
     running = True
     timer = 0
@@ -590,6 +647,7 @@ def game_loop():
     detected = False
     prev_detected = False
     attr_prev_pos = (0, 0)
+    princess_touched = False
 
     while running:
 
@@ -629,6 +687,17 @@ def game_loop():
                         screen = pygame.display.set_mode((width, height))
                     else:
                         screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN | pygame.SCALED)
+
+                if scene == "clear":
+                    if event.key == pygame.K_BACKSPACE:
+                        input_name = input_name[:-1]
+                    elif event.key == pygame.K_RETURN:
+                        if input_name.strip() != "":
+                            add_ranking(input_name.strip(), total_score)
+                            scene = "ranking"
+                    elif len(input_name) < INPUT_MAX_LEN:
+                        if event.unicode.isprintable():
+                            input_name += event.unicode
 
             if event.type == pygame.QUIT:
 
@@ -1063,7 +1132,7 @@ def game_loop():
                         # 触れたらダメージ
                         if player_rect.colliderect(fire_rect):
                             if invincible_timer == 0:
-                                player_hp -= 1
+                                player_hp -= 25
                                 invincible_timer = INVINCIBLE_TIME
                                 hit_stop = 8
                                 flash_timer = FLASH_TIME
@@ -1262,7 +1331,7 @@ def game_loop():
 
                     if invincible_timer == 0:
 
-                        player_hp -= 1
+                        player_hp -= 5
 
                         invincible_timer = INVINCIBLE_TIME
 
@@ -1293,6 +1362,59 @@ def game_loop():
 
                 if attack_timer <= 0:
                     attack = False
+
+            # =================================================
+            # チュートリアル看板
+            # =================================================
+
+            if map_number == 0:
+
+                for sign in tutorial_signs:
+
+                    sign_screen_x = sign["x"] - camera_x
+
+                    sign_rect = pygame.Rect(
+                        sign_screen_x,
+                        sign["y"],
+                        64,
+                        64
+                    )
+
+                    pygame.draw.rect(
+                        screen,
+                        (200, 170, 100),
+                        sign_rect
+                    )
+                    pygame.draw.rect(
+                        screen,
+                        (100, 70, 30),
+                        sign_rect,
+                        3
+                    )
+
+                    near_rect = sign_rect.inflate(150, 150)
+
+                    if player_rect.colliderect(near_rect):
+
+                        for i, line in enumerate(sign["lines"]):
+
+                            line_surf = font_small.render(
+                                line,
+                                True,
+                                (255, 255, 255)
+                            )
+
+                            bg_surf = pygame.Surface(
+                                (line_surf.get_width() + 16, line_surf.get_height() + 6)
+                            )
+                            bg_surf.fill((0, 0, 0))
+                            bg_surf.set_alpha(180)
+
+                            pos_x = sign_screen_x - 40
+                            pos_y = sign["y"] - 70 - i * 30
+
+                            screen.blit(bg_surf, (pos_x, pos_y))
+                            screen.blit(line_surf, (pos_x + 8, pos_y + 3))
 
             # =================================================
             # プレイヤー
@@ -1458,8 +1580,14 @@ def game_loop():
                 if boss["invincible"] > 0:
                     boss["invincible"] -= 1
 
+                # 気絶タイマー
+                if boss["stun_timer"] > 0:            
+                    boss["stun_timer"] -= 1          
+
                 # ノックバック
-                if boss["knockback"] != 0:
+                if boss["stun_timer"] > 0:          
+                    pass                            
+                elif boss["knockback"] != 0:
                     boss["x"] += boss["knockback"]
                     if boss["knockback"] > 0:
                         boss["knockback"] = max(0, boss["knockback"] - 1)
@@ -1470,10 +1598,10 @@ def game_loop():
 
                     if boss["phase"] == 1:
                         patrol_speed = 3
-                        charge_distance = 400
+                        charge_distance = 800
                     else:
                         patrol_speed = 6
-                        charge_distance = 600
+                        charge_distance = 1200
 
                     boss["move_timer"] += 1
                     if boss["move_timer"] >= 120:
@@ -1526,6 +1654,17 @@ def game_loop():
                             hit_stop = 10
                             flash_timer = FLASH_TIME
                             flash_type = "white"
+
+                            if boss["stun_timer"] == 0:
+                                boss["crit_count"] += 1 
+
+                            if boss["crit_count"] >= 5: 
+                                boss["stun_timer"] = 300
+                                boss["crit_count"] = 0
+                                boss["state"] = "patrol"
+                                feedback_text = "STUN!"
+                                feedback_color = (255, 100, 255)
+
                         elif damage == 1:
                             boss["knockback"] = kb_dir * 8
                             feedback_text = "GOOD"
@@ -1564,6 +1703,10 @@ def game_loop():
                             attr_colors[boss["attr"]],
                             special_flags=pygame.BLEND_RGBA_MULT
                         )
+
+                        if boss["stun_timer"] > 0:  
+                            boss_surf = pygame.transform.rotate(boss_surf, 90)  
+
                         screen.blit(boss_surf, (boss_screen_x, floor_y - BOSS_SIZE))
 
                 # ボスHPバー(画面上部中央)
@@ -1584,6 +1727,12 @@ def game_loop():
                 )
                 screen.blit(phase_label, (bar_x - 10, bar_y - 30))
 
+                # 気絶ゲージ
+                if boss["stun_timer"] > 0:
+                    stun_ratio = boss["stun_timer"] / 300
+                    pygame.draw.rect(screen, (60, 60, 60), (bar_x, bar_y + 25, bar_w, 10))
+                    pygame.draw.rect(screen, (255, 100, 255), (bar_x, bar_y + 25, int(bar_w * stun_ratio), 10))
+                    
                 # ボス撃破
                 if boss["hp"] <= 0:
                     score += 1000
@@ -1730,6 +1879,7 @@ def game_loop():
 
                         # 今の焚火ON
                         point["active"] = True
+                        player_hp = min(PLAYER_MAX_HP, player_hp + 25)
 
                         # 復活地点更新
                         respawn_map = map_number
@@ -1801,9 +1951,29 @@ def game_loop():
                     princess_rect
                 )
 
-                if player_rect.colliderect(princess_rect):
+                if player_rect.colliderect(princess_rect) and not princess_touched:
 
-                    scene = "clear"
+                    princess_touched = True
+                    feedback_text = "チュートリアルクリア!"
+                    feedback_color = (100, 255, 150)
+                    feedback_timer = 180  # 3秒(60fps換算)
+
+                if princess_touched and feedback_timer <= 0:
+
+                    princess_touched = False
+
+                    map_number = 1
+
+                    load_map(map_number)
+
+                    player_x = width // 2
+                    camera_x = 0
+
+                    reset_enemies()
+
+                    feedback_text = "マップ移動中..."
+                    feedback_color = (200, 220, 255)
+                    feedback_timer = 40
 
                 # DEBUG Princess
                 if DEBUG:
@@ -1870,6 +2040,25 @@ def game_loop():
                 screen.blit(
                     txt,
                     (width // 2 - 180, height // 3)
+                )
+
+            # =================================================
+            # プリンセス演出中のカウントダウン表示
+            # =================================================
+
+            if princess_touched:
+
+                seconds_left = feedback_timer // 60 + 1
+
+                count_txt = font_mid.render(
+                    f"次のマップへ… {seconds_left}",
+                    True,
+                    (255, 255, 255)
+                )
+
+                screen.blit(
+                    count_txt,
+                    (width // 2 - 120, height // 3 + 70)
                 )
 
             # =================================================
@@ -1986,6 +2175,72 @@ def game_loop():
                 (width // 2 - 150, height // 2 + 60)
             )
 
+            # 名前入力欄
+            name_label = font_mid.render(
+                "Name: " + input_name + "_",
+                True,
+                (255, 255, 255)
+            )
+            screen.blit(name_label, (width // 2 - 150, height // 2 + 120))
+
+            enter_label = font_small.render(
+                "Enterでランキング登録",
+                True,
+                (200, 200, 200)
+            )
+            screen.blit(enter_label, (width // 2 - 150, height // 2 + 160))
+
+        # =================================================
+        # RANKING
+        # =================================================
+
+        elif scene == "ranking":
+
+            screen.fill((0, 0, 0))
+
+            title_label = font_big.render(
+                "RANKING",
+                True,
+                (255, 215, 0)
+            )
+            screen.blit(title_label, (width // 2 - 150, 60))
+
+            ranking_list = load_ranking()
+
+            for i, entry in enumerate(ranking_list):
+
+                color = (255, 255, 255)
+                if i == 0:
+                    color = (255, 215, 0)
+                elif i == 1:
+                    color = (200, 200, 200)
+                elif i == 2:
+                    color = (205, 127, 50)
+
+                row_y = 160 + i * 45
+
+                # 順位
+                rank_label = font_mid.render(f"{i + 1}.", True, color)
+                screen.blit(rank_label, (width // 2 - 200, row_y))
+
+                # 名前
+                name_label = font_mid.render(entry["name"], True, color)
+                screen.blit(name_label, (width // 2 - 140, row_y))
+
+                # スコア（右揃え）
+                score_label = font_mid.render(str(entry["score"]), True, color)
+                score_rect = score_label.get_rect(
+                    topright=(width // 2 + 200, row_y)
+                )
+                screen.blit(score_label, score_rect)
+
+            hint_label = font_mid.render(
+                "Press R to Retry",
+                True,
+                (255, 255, 255)
+            )
+            screen.blit(hint_label, (width // 2 - 150, height - 80))
+
             if keys[pygame.K_r]:
 
                 destroyed_rocks = {}
@@ -1993,6 +2248,7 @@ def game_loop():
                 respawn_map = map_number
                 respawn_x = 0
                 score = 0
+                input_name = ""
 
                 init_game()
                 if demo == 1:
