@@ -564,6 +564,7 @@ def game_loop():
     global boss
     global score
     global defeated_enemies
+    global screen
 
     running = True
     timer = 0
@@ -587,6 +588,7 @@ def game_loop():
     last_element = "none"
     detected = False
     prev_detected = False
+    attr_prev_pos = (0, 0)
 
     while running:
 
@@ -620,6 +622,12 @@ def game_loop():
                 if event.key == pygame.K_TAB:
 
                     show_camera = not show_camera
+
+                if event.key == pygame.K_ESCAPE:
+                    if screen.get_flags() & pygame.FULLSCREEN:
+                        screen = pygame.display.set_mode((width, height))
+                    else:
+                        screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN | pygame.SCALED)
 
             if event.type == pygame.QUIT:
 
@@ -720,8 +728,15 @@ def game_loop():
                 if attr_element in attr_colors:
                     last_element = attr_element
 
-                detected = attr_detected and not prev_detected
-                prev_detected = attr_detected
+                if attr_detected:
+                    dx = attr_pos[0] - attr_prev_pos[0]
+                    dy = attr_pos[1] - attr_prev_pos[1]
+                    movement = (dx**2 + dy**2) ** 0.5
+                    detected = movement > 80 and not attack
+                    attr_prev_pos = attr_pos
+                else:
+                    detected = False
+                    attr_prev_pos = (0, 0)
 
                 # ================================
                 # ワイプ用カメラ映像
@@ -1983,7 +1998,7 @@ def game_loop():
 
         if USE_CAMERA and show_camera and cam_surface is not None:
 
-            CAM_SCALE = 0.25
+            CAM_SCALE = 0.35
 
             cam_w = int(cam_surface.get_width() * CAM_SCALE)
             cam_h = int(cam_surface.get_height() * CAM_SCALE)

@@ -14,9 +14,7 @@ from settings import *
 pygame.init()
 pygame.mixer.init()
 
-screen_size = (1200,700)
-
-screen = pygame.display.set_mode((0,0),pygame.FULLSCREEN)
+screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("My Action Game")
 
 clock = pygame.time.Clock()
@@ -74,6 +72,8 @@ detected = False
 bg = pygame.image.load(
     os.path.join(IMAGE_DIR, "bg.png")
 ).convert()
+
+bg = pygame.transform.scale(bg, (width, height))
 
 block = pygame.image.load(
     os.path.join(IMAGE_DIR, "block.png")
