@@ -13,18 +13,28 @@ from map_data import (
     DEMO_MAP,
     BLOCK_MAP_DEMO,
     MAP,
+    MAP_HARD,
     BLOCK_MAP,
+    BLOCK_MAP_HARD,
     BLOCK_OFFSET_X,
     MAP2,
+    MAP2_HARD,
     BLOCK_MAP2,
+    BLOCK_MAP2_HARD,
     MAP3,
+    MAP3_HARD,
     BLOCK_MAP3,
+    BLOCK_MAP3_HARD,
     ROCK_MAP_DEMO,
     ROCK_MAP,
     ROCK_MAP_2,
+    ROCK_MAP_2_HARD,
     FIRE_MAP_DEMO,
     FIRE_MAP,
+    FIRE_MAP_HARD,
     FIRE_MAP_2,
+    FIRE_MAP_2_HARD,
+    FIRE_MAP_3_HARD,
     BOSS_MAP,       
     BLOCK_MAP_BOSS,    
 )
@@ -219,6 +229,148 @@ maps = [
                 "active": False
             }
         ],
+    },
+
+    {
+        "map": MAP_HARD,
+        "block": BLOCK_MAP_HARD,
+        "rock": ROCK_MAP,
+        "fire": FIRE_MAP_HARD,
+        "offset": BLOCK_OFFSET_X,
+
+        "warps": [
+            {
+                "x": 3000,
+                "y": floor_y - 64,
+                "next_map": 6
+            }
+        ],
+
+        "checkpoints": [
+            {
+                "x": 1500,
+                "y": floor_y - 64,
+                "active": False
+           }
+        ],
+
+        "fuses": [
+            {
+                "x": 1650,
+                "y": floor_y - 64,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            }
+            # 増やしたい場合はここに追加
+        ],
+
+        "plants": [
+            {
+                "x": 2000, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            }
+            # 増やしたい場合はここに追加MAP2は下に
+        ]
+    },
+
+    {
+        "map": MAP2_HARD,
+        "block": BLOCK_MAP2_HARD,
+        "offset": BLOCK_OFFSET_X,
+        "fire": FIRE_MAP_2_HARD,
+        "rock": ROCK_MAP_2_HARD,
+
+        "warps": [
+            {
+                "x": 2500,
+                "y": floor_y - 64,
+                "next_map": 7
+            }
+        ],
+
+        "checkpoints": [
+            {
+                "x": 1000,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ],
+
+        "fuses": [
+            {
+                "x": 1400,
+                "y": floor_y - 100,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            },
+            {
+                "x": 1650,
+                "y": floor_y - 160,
+                "lit": False,
+                "timer": 0,
+                "exploded": False,
+                "explode_timer": 0
+            }
+            # 増やしたい場合はここに追加
+        ]
+
+    },
+
+    {
+        "map": MAP3_HARD,
+        "block": BLOCK_MAP3_HARD,
+        "offset": BLOCK_OFFSET_X,
+        "fire": FIRE_MAP_3_HARD,
+
+        "warps": [
+            {
+                "x": 2400,      
+                "y": floor_y - 64,
+                "next_map": 4
+            }
+        ],
+
+        "checkpoints": [
+            {
+                "x": 700,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ],
+
+        "plants": [
+            {
+                "x": 800, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 1250, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 1600, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 2000, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            # 増やしたい場合はここに追加MAP2は下に
+        ]
     }
 ]
 
@@ -227,6 +379,8 @@ if demo == 0 :
     map_number = 0
 else :
     map_number = 1
+
+hard_mode = 1 #ハードモード切替
 
 def load_map(index):
 
@@ -1962,7 +2116,10 @@ def game_loop():
 
                     princess_touched = False
 
-                    map_number = 1
+                    if hard_mode == 0 :
+                        map_number = 1
+                    else :
+                        map_number = 5
 
                     load_map(map_number)
 
