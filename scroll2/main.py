@@ -36,7 +36,7 @@ from map_data import (
     FIRE_MAP_2_HARD,
     FIRE_MAP_3_HARD,
     BOSS_MAP,       
-    BLOCK_MAP_BOSS,    
+    BLOCK_MAP_BOSS,
 )
 
 # =========================================================
@@ -224,11 +224,11 @@ maps = [
         "warps": [],
         "checkpoints": [
             {
-                "x": 300,
+                "x": 600,
                 "y": floor_y - 64,
                 "active": False
             }
-        ],
+        ], 
     },
 
     {
@@ -465,17 +465,17 @@ tutorial_signs = [
     {
         "x": 300,
         "y": floor_y - 64,
-        "lines": ["紫色のペンライトを左右に動かして移動、振ると早くなる!", "下に持ってくるとジャンプ!"]
+        "lines": ["紫色のペンライトを左右に動かして移動、振ると早くなる!","", "下に持ってくるとジャンプ!"]
     },
     {
         "x": 600,
         "y": floor_y - 64,
-        "lines": ["ペンライトの1火、2水、3草ボタンで属性切替", "振ると攻撃！", "爆弾は火、火には水、枯れ木には草を使い分けよう!"]
+        "lines": ["ペンライトの1火、2水、3草ボタンで属性切替","", "振ると攻撃！","", "爆弾は火、火には水、枯れ木には草を使い分けよう!"]
     },
     {
         "x": 900,
         "y": floor_y - 64,
-        "lines": ["火は草に強く水に弱い", "三すくみを使い分けよう!"]
+        "lines": ["火は草に強く水に弱い","",  "三すくみを使い分けよう!"]
     },
 ]
 
@@ -507,7 +507,7 @@ respawn_map = map_number
 respawn_x = -300
 
 #bossステータス
-BOSS_MAX_HP =200
+BOSS_MAX_HP =60
 boss = None
 
 # =========================================================
@@ -665,6 +665,9 @@ def init_boss():
 # =========================================================
 # 初期化
 # =========================================================
+life = 10
+MAX_LIVES = 10
+time_left = TIME_LIMIT
 
 def init_game():
 
@@ -688,8 +691,7 @@ def init_game():
     global damage_numbers
     global score
     global princess_touched
-
-    time_left = TIME_LIMIT
+    global life
 
     player_attr = "fire"
     facing_right = True
@@ -777,6 +779,7 @@ def game_loop():
     global input_name
     global screen
     global princess_touched
+    global life
 
     running = True
     timer = 0
@@ -938,7 +941,11 @@ def game_loop():
             time_left -= 1
 
             if time_left <= 0:
-                scene = "gameover"
+                life -= 1
+                if life > 0:
+                    scene = "gameover"
+                else:
+                    scene = "titleover"
 
             if USE_CAMERA:
 
@@ -1072,7 +1079,11 @@ def game_loop():
 
             # 穴落下判定
             if pl_y > FALL_DEATH_Y:
-                scene = "gameover"
+                life -= 1
+                if life > 0:
+                    scene = "gameover"
+                else:
+                    scene = "titleover"
 
             if invincible_timer > 0:
                 invincible_timer -= 1
@@ -1157,16 +1168,6 @@ def game_loop():
                             (screen_x, by)
                         )
 
-                        # DEBUG
-                        if DEBUG:
-
-                            pygame.draw.rect(
-                                screen,
-                                (255, 0, 0),
-                                block_rect,
-                                2
-                            )
-
             if not on_block and pl_y < floor_y:
 
                 pl_jump = True
@@ -1232,26 +1233,6 @@ def game_loop():
                             iwa_img,
                             (screen_x, by)
                         )
-
-                        pygame.draw.rect(
-                            screen,
-                            (0,255,0),
-                            (
-                                screen_x,
-                                by,
-                                64,
-                                64
-                            ),
-                            2
-                        )
-
-                        if DEBUG:
-                            pygame.draw.rect(
-                                screen,
-                                (0, 255, 0),
-                                rock_rect,
-                                2
-                            )
 
             # 岩に当たったら移動を取り消す
             if rock_hit:
@@ -1380,6 +1361,27 @@ def game_loop():
                     screen,
                     (255, 255, 0),
                     foot_rect,
+                    2
+                )
+
+                pygame.draw.rect(
+                    screen,
+                    (0, 255, 0),
+                    rock_rect,
+                    2
+                )
+
+                pygame.draw.rect(
+                    screen,
+                    (255, 0, 0),
+                    block_rect,
+                    2
+                )
+                    
+                pygame.draw.rect(
+                    screen,
+                    (255, 200, 0),
+                    point_rect,
                     2
                 )
 
@@ -1797,7 +1799,7 @@ def game_loop():
 
                         damage = get_damage(player_attr, boss["attr"])
                         boss["hp"] -= damage
-                        boss["invincible"] = 60
+                        boss["invincible"] = 30
 
                         kb_dir = 1 if boss["x"] > player_x else -1
 
@@ -2011,16 +2013,6 @@ def game_loop():
                         point_rect
                     )
 
-                # DEBUG
-                if DEBUG:
-
-                    pygame.draw.rect(
-                        screen,
-                        (255, 200, 0),
-                        point_rect,
-                        2
-                    )
-
                 # 接触
                 if player_rect.colliderect(point_rect):
 
@@ -2033,7 +2025,7 @@ def game_loop():
 
                         # 今の焚火ON
                         point["active"] = True
-                        player_hp = min(PLAYER_MAX_HP, player_hp + 25)
+                        player_hp = min(PLAYER_MAX_HP, player_hp + 100)
 
                         # 復活地点更新
                         respawn_map = map_number
@@ -2245,7 +2237,11 @@ def game_loop():
             # =================================================
 
             if player_hp <= 0:
-                scene = "gameover"
+                life -= 1
+                if life > 0:
+                    scene = "gameover"
+                else:
+                    scene = "titleover"
 
         # =================================================
         # GAME OVER
@@ -2257,9 +2253,9 @@ def game_loop():
 
             screen.blit(
                 font_big.render(
-                    "GAME OVER",
+                    "continue…",
                     True,
-                    (255, 0, 0)
+                    (255, 255, 0)
                 ),
                 (width // 2 - 220, height // 2 - 100)
             )
@@ -2273,6 +2269,15 @@ def game_loop():
                 (width // 2 - 100, height // 2 - 20)
             )
 
+            screen.blit(
+                font_mid.render(
+                    f"残り残機: {life}",
+                    True,
+                    (255,255,255)
+                ),
+                (width//2-100, height//2+60)
+            )
+
             if keys[pygame.K_r]:
 
                 map_number = respawn_map
@@ -2284,6 +2289,71 @@ def game_loop():
                 init_game()
 
                 scene = "game"
+
+        # =================================================
+        # TITLE OVER (残機切れ)
+        # =================================================
+
+        elif scene == "titleover":
+
+            screen.fill((0, 0, 0))
+
+            screen.blit(
+                font_big.render(
+                    "GAME OVER",
+                    True,
+                    (255, 0, 0)
+                ),
+                (width // 2 - 220, height // 2 - 140)
+            )
+
+            screen.blit(
+                font_mid.render(
+                    "残機がなくなりました",
+                    True,
+                    (255, 200, 200)
+                ),
+                (width // 2 - 150, height // 2 - 60)
+            )
+
+            screen.blit(
+                font_mid.render(
+                    f"FINAL SCORE: {score}",
+                    True,
+                    (255, 255, 255)
+                ),
+                (width // 2 - 150, height // 2)
+            )
+
+            screen.blit(
+                font_mid.render(
+                    "Rキーでタイトルへ",
+                    True,
+                    (200, 200, 200)
+                ),
+                (width // 2 - 130, height // 2 + 60)
+            )
+
+            if keys[pygame.K_r]:
+
+                life = MAX_LIVES
+
+                destroyed_rocks = {}
+                defeated_enemies = {}
+                score = 0
+                input_name = ""
+
+                if demo == 1:
+                    map_number = 0
+                else:
+                    map_number = 1
+
+                respawn_map = map_number
+                respawn_x = -300
+
+                load_map(map_number)
+
+                scene = "title"
 
         # =================================================
         # CLEAR
@@ -2356,7 +2426,7 @@ def game_loop():
             screen.fill((0, 0, 0))
 
             title_label = font_big.render(
-                "RANKING",
+                "RANKING", 
                 True,
                 (255, 215, 0)
             )
