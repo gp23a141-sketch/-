@@ -37,6 +37,10 @@ from map_data import (
     FIRE_MAP_3_HARD,
     BOSS_MAP,       
     BLOCK_MAP_BOSS,
+    MAP4_HARD,
+    BLOCK_MAP4_HARD,
+    ROCK_MAP_3_HARD,
+    FIRE_MAP_4_HARD
 )
 
 # =========================================================
@@ -332,7 +336,7 @@ maps = [
             {
                 "x": 2400,      
                 "y": floor_y - 64,
-                "next_map": 4
+                "next_map": 8
             }
         ],
 
@@ -370,6 +374,77 @@ maps = [
                 "small"
             },
             # 増やしたい場合はここに追加MAP2は下に
+        ]
+    },
+    {
+        "map": MAP4_HARD,
+        "block": BLOCK_MAP4_HARD,
+        "offset": BLOCK_OFFSET_X,
+        "rock": ROCK_MAP_3_HARD,
+         "fire": FIRE_MAP_4_HARD,
+    
+         "warps": [
+            {
+                "x": 2400,      
+                "y": floor_y - 64,
+                "next_map": 4
+            }
+        ],
+    
+        "checkpoints": [
+            {
+                "x": 700,
+                "y": floor_y - 64,
+                "active": False
+            }
+        ],
+    
+        "plants": [
+            {
+                "x": 200, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 400, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 600, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+            {
+                "x": 800, 
+                "y": floor_y - 64, 
+                "state": 
+                "small"
+            },
+                # 増やしたい場合はここに追加MAP2は下に
+        ],
+
+        "fuses": [
+                    {
+                        "x": 1000,
+                        "y": floor_y - 50,
+                        "lit": False,
+                        "timer": 0,
+                        "exploded": False,
+                        "explode_timer": 0
+                    },
+                    {
+                        "x": 1200,
+                        "y": floor_y - 50,
+                        "lit": False,
+                        "timer": 0,
+                        "exploded": False,
+                        "explode_timer": 0
+                    }
+                    # 増やしたい場合はここに追加
         ]
     }
 ]
