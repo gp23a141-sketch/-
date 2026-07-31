@@ -1118,17 +1118,32 @@ def game_loop():
 
             if move_detected:
 
-                if "right" in action:
+                if action == "right":
                     player_x += move_speed
                     facing_right = True
 
-                if "left" in action:
+                elif action == "left":
                     player_x = max(0, player_x - move_speed)
                     facing_right = False
 
-                if "jump" in action and not pl_jump:
-                    pl_jump = True
-                    pl_yp = jump_power
+                elif action == "jump":
+                    if not pl_jump:
+                        pl_jump = True
+                        pl_yp = jump_power
+
+                elif action == "jump_right":
+                    player_x += move_speed
+                    facing_right = True
+                    if not pl_jump:
+                        pl_jump = True
+                        pl_yp = jump_power
+
+                elif action == "jump_left":
+                    player_x = max(0, player_x - move_speed)
+                    facing_right = False
+                    if not pl_jump:
+                        pl_jump = True
+                        pl_yp = jump_power
 
             # ========================================
             # キーボード移動
