@@ -14,10 +14,20 @@ from settings import *
 pygame.init()
 pygame.mixer.init()
 
-screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN | pygame.SCALED)
+real_screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN | pygame.SCALED)
 pygame.display.set_caption("My Action Game")
 
+screen = pygame.Surface((width, height))
+
 clock = pygame.time.Clock()
+
+def draw_outlined_text(surface, font, text, color, pos, outline_color=(0, 0, 0)):
+    x, y = pos
+    outline_surf = font.render(text, True, outline_color)
+    for dx, dy in [(-2,0),(2,0),(0,-2),(0,2),(-2,-2),(2,-2),(-2,2),(2,2)]:
+        surface.blit(outline_surf, (x + dx, y + dy))
+    text_surf = font.render(text, True, color)
+    surface.blit(text_surf, (x, y))
 
 # =========================================================
 # フォント

@@ -1,5 +1,13 @@
 [
   {
+    "name": "demo",
+    "score": 5780
+  },
+  {
+    "name": "rr",
+    "score": 5740
+  },
+  {
     "name": "A",
     "score": 4240
   },
@@ -30,29 +38,5 @@
   {
     "name": "PT",
     "score": 3500
-  },
-    {
-    "name": "Z",
-    "score": 3350
-  },
-  {
-    "name": "S",
-    "score": 3330
-  },
-  {
-    "name": "ゆうと",
-    "score": 2810
-  },
-  {
-    "name": "タ",
-    "score": 2790
-  },
-  {
-    "name": "K",
-    "score": 2320
-  },
-  {
-    "name": "た",
-    "score": 2220
   }
 ]

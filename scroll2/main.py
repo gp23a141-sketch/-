@@ -9,6 +9,16 @@ from assets import *
 BOSS_SIZE = 150
 boss_base = pygame.transform.scale(enemy_base, (BOSS_SIZE, BOSS_SIZE))
 
+# =========================================================
+# レイアウト（ゲーム画面を中央に縮小配置）
+# =========================================================
+
+GAME_SCALE = 0.6
+game_box_w = int(width * GAME_SCALE)
+game_box_h = int(height * GAME_SCALE)
+game_box_x = (width - game_box_w) // 2
+game_box_y = 20
+
 from map_data import (
     DEMO_MAP,
     BLOCK_MAP_DEMO,
@@ -40,7 +50,7 @@ from map_data import (
     MAP4_HARD,
     BLOCK_MAP4_HARD,
     ROCK_MAP_3_HARD,
-    FIRE_MAP_4_HARD
+    FIRE_MAP_4_HARD,
 )
 
 # =========================================================
@@ -915,10 +925,7 @@ def game_loop():
                     show_camera = not show_camera
 
                 if event.key == pygame.K_ESCAPE:
-                    if screen.get_flags() & pygame.FULLSCREEN:
-                        screen = pygame.display.set_mode((width, height))
-                    else:
-                        screen = pygame.display.set_mode((width, height), pygame.FULLSCREEN | pygame.SCALED)
+                    pygame.display.toggle_fullscreen()
 
                 if scene == "clear":
                     if event.key == pygame.K_BACKSPACE:
@@ -1026,7 +1033,7 @@ def game_loop():
 
                 frame_count += 1
 
-                if frame_count % 2 == 0:
+                if frame_count % 6 == 0:
                     last_camera_result = pen_con.update()
 
                 move_detected, move_pos, action, speed_state, attr_detected, attr_element, attr_pos, debug_frame = last_camera_result
@@ -1670,6 +1677,24 @@ def game_loop():
                     )
                 )
 
+            # プレイヤーHPバー（頭上）
+            player_bar_x = player_x - camera_x - 30
+            player_bar_y = pl_y - 90
+
+            pygame.draw.rect(
+                screen,
+                (80, 80, 80),
+                (player_bar_x, player_bar_y, 60, 8)
+            )
+
+            player_hp_ratio = max(0, player_hp / PLAYER_MAX_HP)
+
+            pygame.draw.rect(
+                screen,
+                (0, 255, 0),
+                (player_bar_x, player_bar_y, int(60 * player_hp_ratio), 8)
+            )
+
             # =================================================
             # 攻撃エフェクト（剣を振るモーション）
             # =================================================
@@ -1940,9 +1965,27 @@ def game_loop():
 
                         screen.blit(boss_surf, (boss_screen_x, floor_y - BOSS_SIZE))
 
+                    # ボスHPバー（頭上）
+                    boss_bar_x = boss_screen_x + BOSS_SIZE // 2 - 50
+                    boss_bar_y = floor_y - BOSS_SIZE - 20
+
+                    pygame.draw.rect(
+                        screen,
+                        (80, 80, 80),
+                        (boss_bar_x, boss_bar_y, 100, 10)
+                    )
+
+                    boss_hp_ratio = max(0, boss["hp"] / boss["max_hp"])
+
+                    pygame.draw.rect(
+                        screen,
+                        (0, 255, 0),
+                        (boss_bar_x, boss_bar_y, int(100 * boss_hp_ratio), 10)
+                    )
+
                 # ボスHPバー(画面上部中央)
                 bar_w = 300
-                bar_x = width // 2 - bar_w // 2 -200
+                bar_x = width // 2 - bar_w // 2 - 200
                 bar_y = 20
                 pygame.draw.rect(screen, (80, 80, 80), (bar_x, bar_y, bar_w, 20))
                 hp_ratio = max(0, boss["hp"] / boss["max_hp"])
@@ -2208,44 +2251,6 @@ def game_loop():
                         princess_rect,
                         2
                     )
-            
-            # =================================================
-            # HP
-            # =================================================
-
-            pygame.draw.rect(
-                screen,
-                (0, 0, 0),
-                (50, 50, 200, 20)
-            )
-
-            pygame.draw.rect(
-                screen,
-                (0, 255, 0),
-                (
-                    50,
-                    50,
-                    200 * (
-                        player_hp / PLAYER_MAX_HP
-                    ),
-                    20
-                )
-            )
-
-            txt = font_mid.render(
-                f"TIME: {time_left // 60}",
-                True,
-                (255, 255, 255)
-            )
-
-            screen.blit(txt, (50, 80))
-
-            score_txt = font_mid.render(
-                f"SCORE: {score}",
-                True,
-                (255, 255, 255)
-            )
-            screen.blit(score_txt, (50, 110))
 
             # =================================================
             # フィードバック
@@ -2561,12 +2566,28 @@ def game_loop():
                 scene = "game"
 
         # =================================================
-        # カメラワイプ
+        # 画面合成（ゲーム画面を中央に縮小配置）
+        # =================================================
+
+        real_screen.fill((15, 15, 15))
+
+        scaled_game = pygame.transform.scale(screen, (game_box_w, game_box_h))
+        real_screen.blit(scaled_game, (game_box_x, game_box_y))
+
+        pygame.draw.rect(
+            real_screen,
+            (255, 255, 255),
+            (game_box_x, game_box_y, game_box_w, game_box_h),
+            2
+        )
+
+        # =================================================
+        # カメラワイプ（ゲーム画面の下）
         # =================================================
 
         if USE_CAMERA and show_camera and cam_surface is not None:
 
-            CAM_SCALE = 0.45
+            CAM_SCALE = 0.3
 
             cam_w = int(cam_surface.get_width() * CAM_SCALE)
             cam_h = int(cam_surface.get_height() * CAM_SCALE)
@@ -2576,19 +2597,61 @@ def game_loop():
                 (cam_w, cam_h)
             )
 
-            cam_x = width - cam_w
-            cam_y = 0
+            cam_x = width // 2 - cam_w // 2
+            cam_y = game_box_y + game_box_h + 20
 
-            screen.blit(
+            real_screen.blit(
                 scaled_cam,
                 (cam_x, cam_y)
             )
 
             pygame.draw.rect(
-                screen,
+                real_screen,
                 (255, 255, 255),
                 (cam_x, cam_y, cam_w, cam_h),
                 2
+            )
+
+        # =================================================
+        # HUD（左右の余白）
+        # =================================================
+
+        if scene == "game":
+
+            hud_y = game_box_y + 20
+
+            # 左側：HPバー・TIME
+            hud_left_x = 30
+
+            pygame.draw.rect(real_screen, (40, 40, 40), (hud_left_x, hud_y, 160, 16))
+            pygame.draw.rect(
+                real_screen,
+                (0, 255, 0),
+                (hud_left_x, hud_y, int(160 * max(0, player_hp / PLAYER_MAX_HP)), 16)
+            )
+
+            draw_outlined_text(
+                real_screen, font_mid,
+                f"TIME: {time_left // 60}",
+                (255, 255, 255),
+                (hud_left_x, hud_y + 30)
+            )
+
+            # 右側：SCORE・LIFE
+            hud_right_x = game_box_x + game_box_w + 30
+
+            draw_outlined_text(
+                real_screen, font_mid,
+                f"SCORE: {score}",
+                (255, 255, 255),
+                (hud_right_x, hud_y)
+            )
+
+            draw_outlined_text(
+                real_screen, font_mid,
+                f"LIFE: {life}",
+                (255, 255, 255),
+                (hud_right_x, hud_y + 40)
             )
 
         pygame.display.flip()
