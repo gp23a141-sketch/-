@@ -465,7 +465,7 @@ if demo == 0 :
 else :
     map_number = 1
 
-hard_mode = 1 #ハードモード切替
+
 
 def load_map(index):
 
@@ -817,6 +817,7 @@ INPUT_MAX_LEN = 8
 
 no_camera_mode = True #カメラ使わないモード
 
+
 def game_loop():
 
     global scene
@@ -866,6 +867,7 @@ def game_loop():
     global princess_touched
     global life
 
+    hard_mode = 0 #ハードモード切替
     running = True
     timer = 0
 
@@ -941,7 +943,14 @@ def game_loop():
             if event.type == pygame.QUIT:
 
                 running = False
-
+            
+            if (
+                scene == "title" 
+                and event.type == pygame.KEYDOWN
+            ):
+                if event.key in (pygame.K_RIGHT, pygame.K_LEFT):
+                    hard_mode = 1 - hard_mode
+                
             if (
                 scene == "title"
                 and event.type == pygame.MOUSEBUTTONDOWN
@@ -999,6 +1008,30 @@ def game_loop():
                 (width // 2 - 250, height // 2 - 120)
             )
 
+
+            txt_Select = font_mid.render(
+                "Select difficulty",
+                True,
+                (200, 200, 200)
+            )
+
+            screen.blit(
+                txt_Select,
+                (width // 2 - 150, height // 2 + 20)
+            )
+
+            diff_text = "Hard" if hard_mode == 1 else "Normal"
+            txt_Difficulty = font_mid.render(
+                diff_text, 
+                True, 
+                (200, 200, 200)
+            )
+
+            screen.blit(
+                txt_Difficulty,
+                (width // 2 - 70, height // 2 + 60)
+            )
+            
             if (timer // 30) % 2 == 0:
 
                 txt = font_mid.render(
