@@ -453,7 +453,39 @@ maps = [
                         "timer": 0,
                         "exploded": False,
                         "explode_timer": 0
-                    }
+                    },
+                    {
+                        "x": 1400,
+                        "y": floor_y - 50,
+                        "lit": False,
+                        "timer": 0,
+                        "exploded": False,
+                        "explode_timer": 0
+                    },
+                    {
+                        "x": 1600,
+                        "y": floor_y - 50,
+                        "lit": False,
+                        "timer": 0,
+                        "exploded": False,
+                        "explode_timer": 0
+                    },
+                    {
+                        "x": 1800,
+                        "y": floor_y - 50,
+                        "lit": False,
+                        "timer": 0,
+                        "exploded": False,
+                        "explode_timer": 0
+                    },
+                    {
+                        "x": 2000,
+                        "y": floor_y - 50,
+                        "lit": False,
+                        "timer": 0,
+                        "exploded": False,
+                        "explode_timer": 0
+                    },
                     # 増やしたい場合はここに追加
         ]
     }
