@@ -863,6 +863,8 @@ def game_loop():
     global life
     global respawn_timer
 
+    global hard_mode
+
     global pl_y
     global pl_yp
     global pl_jump
@@ -982,6 +984,13 @@ def game_loop():
                 running = False
 
             if (
+                scene == "title" 
+                and event.type == pygame.KEYDOWN
+            ):
+                if event.key in (pygame.K_RIGHT, pygame.K_LEFT):
+                    hard_mode = 1 - hard_mode
+
+            if (
                 scene == "title"
                 and event.type == pygame.MOUSEBUTTONDOWN
             ):
@@ -1038,6 +1047,29 @@ def game_loop():
                 (width // 2 - 250, height // 2 - 120)
             )
 
+            txt_Select = font_mid.render(
+                "Select difficulty",
+                True,
+                (200, 200, 200)
+            )
+
+            screen.blit(
+                txt_Select,
+                (width // 2 - 150, height // 2 + 20)
+            )
+
+            diff_text = "Hard" if hard_mode == 1 else "Normal"
+            txt_Difficulty = font_mid.render(
+                diff_text, 
+                True, 
+                (200, 200, 200)
+            )
+
+            screen.blit(
+                txt_Difficulty,
+                (width // 2 - 70, height // 2 + 60)
+            )
+
             if (timer // 30) % 2 == 0:
 
                 txt = font_mid.render(
@@ -1064,7 +1096,7 @@ def game_loop():
             if time_left <= 0:
                 life -= 1
                 if life > 0:
-                    scene = "gameover"
+                    scene = "titleover"
                 else:
                     scene = "titleover"
 
@@ -1072,7 +1104,7 @@ def game_loop():
 
                 frame_count += 1
 
-                if frame_count % 6 == 0:
+                if frame_count % 2 == 0:
                     last_camera_result = pen_con.update()
 
                 move_detected, move_pos, action, speed_state, attr_detected, attr_element, attr_pos, debug_frame = last_camera_result
@@ -1222,7 +1254,7 @@ def game_loop():
                     respawn_timer = RESPAWN_WAIT
                     scene = "respawn"
                 else:
-                    scene = "gameover"
+                    scene = "titleover"
 
             if invincible_timer > 0:
                 invincible_timer -= 1
@@ -2384,7 +2416,7 @@ def game_loop():
 
                 else:
                     # 残機0 → GAME OVER
-                    scene = "gameover"
+                    scene = "titleover"
 
         # =================================================
         # RESPAWN
@@ -2431,53 +2463,6 @@ def game_loop():
 
             # 5秒経過
             if respawn_timer <= 0:
-
-                map_number = respawn_map
-
-                load_map(map_number)
-
-                camera_x = respawn_x
-
-                init_game()
-
-                scene = "game"
-
-        # =================================================
-        # GAME OVER
-        # =================================================
-
-        elif scene == "gameover":
-
-            screen.fill((0, 0, 0))
-
-            screen.blit(
-                font_big.render(
-                    "continue…",
-                    True,
-                    (255, 255, 0)
-                ),
-                (width // 2 - 220, height // 2 - 100)
-            )
-
-            screen.blit(
-                font_mid.render(
-                    f"SCORE: {score}",
-                    True,
-                    (255, 255, 255)
-                ),
-                (width // 2 - 100, height // 2 - 20)
-            )
-
-            screen.blit(
-                font_mid.render(
-                    f"残り残機: {life}",
-                    True,
-                    (255,255,255)
-                ),
-                (width//2-100, height//2+60)
-            )
-
-            if keys[pygame.K_r]:
 
                 map_number = respawn_map
 
