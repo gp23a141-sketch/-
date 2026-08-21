@@ -497,7 +497,7 @@ if demo == 0 :
 else :
     map_number = 1
 
-
+hard_mode = 1 #ハードモード切替
 
 def load_map(index):
 
@@ -783,6 +783,10 @@ def init_boss():
 # 初期化
 # =========================================================
 life = 10
+
+RESPAWN_WAIT = 1 * fps
+respawn_timer = 0
+
 MAX_LIVES = 10
 time_left = TIME_LIMIT
 
@@ -849,13 +853,15 @@ INPUT_MAX_LEN = 8
 
 no_camera_mode = True #カメラ使わないモード
 
-
 def game_loop():
 
     global scene
 
     global camera_x
     global player_x
+
+    global life
+    global respawn_timer
 
     global pl_y
     global pl_yp
@@ -899,7 +905,6 @@ def game_loop():
     global princess_touched
     global life
 
-    hard_mode = 0 #ハードモード切替
     running = True
     timer = 0
 
@@ -975,14 +980,7 @@ def game_loop():
             if event.type == pygame.QUIT:
 
                 running = False
-            
-            if (
-                scene == "title" 
-                and event.type == pygame.KEYDOWN
-            ):
-                if event.key in (pygame.K_RIGHT, pygame.K_LEFT):
-                    hard_mode = 1 - hard_mode
-                
+
             if (
                 scene == "title"
                 and event.type == pygame.MOUSEBUTTONDOWN
@@ -1040,30 +1038,6 @@ def game_loop():
                 (width // 2 - 250, height // 2 - 120)
             )
 
-
-            txt_Select = font_mid.render(
-                "Select difficulty",
-                True,
-                (200, 200, 200)
-            )
-
-            screen.blit(
-                txt_Select,
-                (width // 2 - 150, height // 2 + 20)
-            )
-
-            diff_text = "Hard" if hard_mode == 1 else "Normal"
-            txt_Difficulty = font_mid.render(
-                diff_text, 
-                True, 
-                (200, 200, 200)
-            )
-
-            screen.blit(
-                txt_Difficulty,
-                (width // 2 - 70, height // 2 + 60)
-            )
-            
             if (timer // 30) % 2 == 0:
 
                 txt = font_mid.render(
@@ -1241,11 +1215,14 @@ def game_loop():
 
             # 穴落下判定
             if pl_y > FALL_DEATH_Y:
+
                 life -= 1
+
                 if life > 0:
-                    scene = "gameover"
+                    respawn_timer = RESPAWN_WAIT
+                    scene = "respawn"
                 else:
-                    scene = "titleover"
+                    scene = "gameover"
 
             if invincible_timer > 0:
                 invincible_timer -= 1
@@ -1821,7 +1798,7 @@ def game_loop():
 
                 screen.blit(rotated_sword, sword_rect)
 
-           # =================================================
+            # =================================================
             # 敵
             # =================================================
 
@@ -2397,11 +2374,73 @@ def game_loop():
             # =================================================
 
             if player_hp <= 0:
+
                 life -= 1
+
                 if life > 0:
-                    scene = "gameover"
+                    # 残機がある → 5秒後に復活
+                    respawn_timer = RESPAWN_WAIT
+                    scene = "respawn"
+
                 else:
-                    scene = "titleover"
+                    # 残機0 → GAME OVER
+                    scene = "gameover"
+
+        # =================================================
+        # RESPAWN
+        # =================================================
+
+        elif scene == "respawn":
+
+            screen.fill((0, 0, 0))
+
+            # タイトル
+            screen.blit(
+                font_big.render(
+                    "YOU DIED",
+                    True,
+                    (255, 80, 80)
+                ),
+                (width // 2 - 180, height // 2 - 150)
+            )
+
+            # 残機
+            screen.blit(
+                font_mid.render(
+                    f"LIFE: {life}",
+                    True,
+                    (255, 255, 255)
+                ),
+                (width // 2 - 80, height // 2 - 60)
+            )
+
+            # 残り時間
+            seconds = (respawn_timer + fps - 1) // fps
+
+            screen.blit(
+                font_mid.render(
+                    f"RESPAWN IN {seconds}",
+                    True,
+                    (255, 255, 0)
+                ),
+                (width // 2 - 130, height // 2)
+            )
+
+            # タイマー減少
+            respawn_timer -= 1
+
+            # 5秒経過
+            if respawn_timer <= 0:
+
+                map_number = respawn_map
+
+                load_map(map_number)
+
+                camera_x = respawn_x
+
+                init_game()
+
+                scene = "game"
 
         # =================================================
         # GAME OVER
