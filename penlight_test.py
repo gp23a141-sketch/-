@@ -3,7 +3,8 @@ import numpy as np
 from collections import deque
 
 class PenlightController:
-    def __init__(self, camera_id=0, width=1200, height=800):
+    def __init__(self, camera_id=1, width=1200, height=800):
+        # まず指定された ID + CAP_DSHOW で接続を試みる
         self.cap = cv2.VideoCapture(camera_id, cv2.CAP_DSHOW)
         
         # 開けない場合はフォールバック
@@ -18,13 +19,13 @@ class PenlightController:
         self.cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
         self.cap.set(cv2.CAP_PROP_FPS, 60)
         self.cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.25) 
-        self.cap.set(cv2.CAP_PROP_EXPOSURE, -4)
+        self.cap.set(cv2.CAP_PROP_EXPOSURE, -11)
         self.cap.set(cv2.CAP_PROP_AUTO_WB, 0)
         
-        self.proc_w = 320
-        self.proc_h = 240
+        self.proc_w = 640
+        self.proc_h = 480
         
-        self.area_threshold = 30
+        self.area_threshold = 10
 
         # 動作判定用の設定 
         self.deadzone_x = 100  # 左右の反応エリアまでの距離
@@ -35,19 +36,19 @@ class PenlightController:
         self.shake_threshold = 200 
 
         self.masks_config = {
-            "fire": [
-                ([0, 160, 160], [10, 255, 255]), 
-                ([170, 160, 160], [180, 255, 255])
-            ],
-            "purple": [
-                ([140, 160, 160], [165, 255, 255])
-            ],
-            "grass": [
-                ([45, 160, 160], [75, 255, 255])
-            ],
-            "water": [
-                ([100, 160, 160], [130, 255, 255])
-            ]
+    "fire": [
+        ([0, 90, 120], [10, 255, 255]), 
+        ([170, 90, 120], [180, 255, 255])
+    ],
+    "purple": [
+        ([135, 90, 120], [165, 255, 255])
+    ],
+    "grass": [
+        ([40, 90, 120], [80, 255, 255])
+    ],
+    "water": [
+        ([95, 90, 120], [135, 255, 255])
+    ]
         }
         
         self.draw_colors = {
@@ -113,7 +114,7 @@ class PenlightController:
         center_x, center_y = w // 2, h // 2
 
         frame_resized = cv2.resize(frame, (self.proc_w, self.proc_h))
-        blurred = cv2.GaussianBlur(frame_resized, (11, 11), 0)
+        blurred = cv2.GaussianBlur(frame_resized, (5, 5), 0)
         hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 
         # 移動用（紫）の変数
